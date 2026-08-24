@@ -1,39 +1,58 @@
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { useAuth } from "@/contexts/AuthContext";
-import { renameNode, subscribeToUserNodes, type Node } from "@/services/nodes";
+import { subscribeToUserHomeLinks } from "@/services/homes";
+import { renameNode, subscribeToNodesForHome, type Node } from "@/services/nodes";
 import { colors } from "@/theme/colors";
 import { SymbolView } from "expo-symbols";
 import { useEffect, useState } from "react";
 import {
-    Alert,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 export default function NodesScreen() {
   const { user } = useAuth();
   const [nodes, setNodes] = useState<Node[]>([]);
+  const [hid, setHid] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
-    const unsubscribe = subscribeToUserNodes(user.uid, setNodes);
+    const unsubscribe = subscribeToUserHomeLinks(user.uid, (links) => {
+      if (links.length > 0) {
+        setHid(links[0].hid);
+      } else {
+        setHid(null);
+      }
+    });
     return unsubscribe;
   }, [user]);
 
-  const handleRename = (node: Node) => {
+  useEffect(() => {
+    if (!hid) {
+      setNodes([]);
+      return;
+    }
+    const unsubscribe = subscribeToNodesForHome(hid, setNodes);
+    return unsubscribe;
+  }, [hid]);
+
+  const handleRename = (node: any) => {
+    const id = node.nodeId || node.id;
+    const currentName = node.nickname || node.name;
     Alert.prompt(
       "Rename node",
       undefined,
       async (newName) => {
-        if (newName && newName.trim()) {
-          await renameNode(node.id, newName.trim());
+        if (newName && newName.trim() && id) {
+          await renameNode(id, newName.trim());
         }
       },
       "plain-text",
-      node.name,
+      currentName,
     );
   };
 
@@ -46,12 +65,12 @@ export default function NodesScreen() {
       <ScreenHeader title="Configure nodes" />
 
       <View style={styles.card}>
-        {nodes.map((node, index) => (
+        {nodes.map((node: any, index) => (
           <View
-            key={node.id}
+            key={node.nodeId || node.id || index}
             style={[styles.row, index === nodes.length - 1 && styles.lastRow]}
           >
-            <Text style={styles.nodeName}>{node.name}</Text>
+            <Text style={styles.nodeName}>{node.nickname || node.name}</Text>
             <TouchableOpacity onPress={() => handleRename(node)}>
               <SymbolView name="pencil" size={18} tintColor={colors.accent} />
             </TouchableOpacity>

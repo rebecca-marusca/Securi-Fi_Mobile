@@ -5,9 +5,10 @@ type ToggleRowProps = {
   label: string;
   value: boolean;
   onValueChange: (value: boolean) => void;
+  disabled?: boolean;
 };
 
-export function ToggleRow({ label, value, onValueChange }: ToggleRowProps) {
+export function ToggleRow({ label, value, onValueChange, disabled = false, }: ToggleRowProps) {
   return (
     <View style={styles.row}>
       <Text style={styles.label}>{label}</Text>
@@ -26,6 +27,7 @@ export function FinalToggleRow({
   label,
   value,
   onValueChange,
+  disabled = false,
 }: ToggleRowProps) {
   return (
     <View style={styles.finalrow}>
