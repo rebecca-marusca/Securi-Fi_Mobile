@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { StyleSheet, Text, View, Alert } from 'react-native';
 import AnimatedWaveHeader from '../../components/AnimatedWaveHeader';
 import { colors } from "@/theme/colors";
@@ -8,6 +8,8 @@ import { useUserProfile } from "@/hooks/useUserProfile";
 import { FinalToggleRow } from "@/components/ToggleRow";
 import { useHome } from "@/hooks/useHome";
 import { armHome, disarmHome } from "@/services/homes";
+import { subscribeToNodesForHome } from "@/services/nodes";
+import { RoomNode } from '@/services/userProfile';
 
 function getGreeting(): string {
   const hour = new Date().getHours();
@@ -28,6 +30,29 @@ const HomeScreen: React.FC = () => {
   const { profile } = useUserProfile();
   const { home, hid, isLoading } = useHome();
   const [greeting, setGreeting] = useState(getGreeting());
+  const [dbNodes, setDbNodes] = useState<any[]>([]);
+
+  // Subscribe to home's nodes from database for real-time nickname updates
+  useEffect(() => {
+    if (!hid) return;
+    const unsub = subscribeToNodesForHome(hid, setDbNodes);
+    return unsub;
+  }, [hid]);
+
+  const formattedNodes: RoomNode[] = useMemo(() => {
+    if (dbNodes.length === 0) return [];
+    const defaultPositions = [
+      { x: 0.28, y: 0.45 },
+      { x: 0.72, y: 0.28 },
+      { x: 0.58, y: 0.75 },
+    ];
+    return dbNodes.map((node, index) => ({
+      id: node.nodeId || node.id || `node-${index}`,
+      name: node.nickname || node.name || `Node ${index + 1}`,
+      x: defaultPositions[index % defaultPositions.length].x,
+      y: defaultPositions[index % defaultPositions.length].y,
+    }));
+  }, [dbNodes]);
 
   // Optimistic local toggle state, same pattern as the Notifications screen —
   // reflects the user's tap instantly, then reconciles with `home.requestedArmed`
@@ -72,6 +97,7 @@ const HomeScreen: React.FC = () => {
         </View>
 
         <RoomNodeGraph
+          nodes={formattedNodes.length > 0 ? formattedNodes : undefined}
           initialNodes={[
             { id: 'kitchen', name: 'kitchen', x: 0.28, y: 0.45 },
             { id: 'living-room', name: 'living room', x: 0.72, y: 0.28 },
@@ -90,7 +116,7 @@ const HomeScreen: React.FC = () => {
         </View>
 
         <FinalToggleRow
-          label={optimisticArmed ? "All Armed" : "All Disarmed"}
+          label={optimisticArmed ? "Armed" : "Disarmed"}
           value={optimisticArmed}
           onValueChange={handleToggle}
           disabled={!hid || isLoading}

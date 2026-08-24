@@ -43,12 +43,14 @@ export default function NodesScreen() {
   const handleRename = (node: any) => {
     const id = node.nodeId || node.id;
     const currentName = node.nickname || node.name;
+    const hid = node.hid || node.homeId;
+    
     Alert.prompt(
       "Rename node",
       undefined,
       async (newName) => {
-        if (newName && newName.trim() && id) {
-          await renameNode(id, newName.trim());
+        if (newName && newName.trim() && id && hid) {
+          await renameNode(hid, id, newName.trim());
         }
       },
       "plain-text",

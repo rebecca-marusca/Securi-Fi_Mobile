@@ -19,3 +19,16 @@ class PairHomeResponse(BaseModel):
     hid: str
     master_mac: str
     role: str
+    
+class RenameNodeRequest(BaseModel):
+    nickname: str
+
+    @field_validator("nickname")
+    @classmethod
+    def not_blank(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("nickname cannot be empty")
+        if len(v) > 20:
+            raise ValueError("nickname must be 20 characters or fewer")
+        return v

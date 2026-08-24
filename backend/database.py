@@ -97,6 +97,10 @@ def get_homes_for_user(uid: str) -> list[dict]:
 # Nodes (nickname only — everything else belongs to the server)
 # ============================================================
 
+def get_node(hid: str, node_id: str) -> Optional[dict]:
+    doc = db.collection("nodes").document(f"{hid}_{node_id}").get()
+    return doc.to_dict() if doc.exists else None
+
 def rename_node(hid: str, node_id: str, nickname: str):
     db.collection("nodes").document(f"{hid}_{node_id}").update({"nickname": nickname})
 
