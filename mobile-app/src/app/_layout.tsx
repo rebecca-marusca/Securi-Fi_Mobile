@@ -1,7 +1,7 @@
 import { SplashOverlay } from "@/components/splash-overlay";
 import { AlertProvider, useActiveAlert } from "@/contexts/AlertContext";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
-import { Redirect, Slot } from "expo-router";
+import { Redirect, Slot, useSegments } from "expo-router";
 import { useFonts } from "expo-font";
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 
@@ -9,6 +9,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler'
 function RootNavigation() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { activeAlert, isLoading: alertLoading } = useActiveAlert();
+  const segments = useSegments();
   const [fontsLoaded] = useFonts({
     "SF-Pro-Text-Regular": require("@/assets/fonts/SF-Pro-Text-Regular.otf"),
     "SF-Pro-Text-Bold": require("@/assets/fonts/SF-Pro-Text-Bold.otf"),
@@ -22,7 +23,10 @@ function RootNavigation() {
   }
 
   if (!isAuthenticated) {
-    return <Redirect href="/auth/getStarted" />;
+    if (segments[0] !== 'auth') {
+      return <Redirect href="/auth/getStarted" />;
+    }
+    return null;
   }
 
   if (activeAlert) {
@@ -36,7 +40,12 @@ function RootNavigation() {
     );
   }
 
-  return <Redirect href="/tabs/home" />;
+  const isAllowedGroup = ['tabs', 'onboarding', 'alert'].includes(segments[0]);
+  if (!isAllowedGroup) {
+    return <Redirect href="/tabs/home" />;
+  }
+
+  return null;
 }
 
 export default function RootLayout() {

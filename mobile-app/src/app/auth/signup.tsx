@@ -4,12 +4,13 @@
 
 import { useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, Image, KeyboardAvoidingView, ScrollView, Platform } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { getAuth, createUserWithEmailAndPassword, updateProfile } from '@react-native-firebase/auth';
 import { getFirestore, doc, setDoc, serverTimestamp } from '@react-native-firebase/firestore';
 import { colors } from '@/theme/colors';
 
 export default function SignupScreen() {
+  const router = useRouter();
   const { email } = useLocalSearchParams<{ email: string }>();
 
   const [name, setName] = useState('');
@@ -46,7 +47,7 @@ export default function SignupScreen() {
         { email, phoneNumber: phone.trim(), displayName: name.trim(), createdAt: serverTimestamp() },
         { merge: true }
       );
-      // Success: onAuthStateChanged in root layout handles the redirect.
+      router.replace('/onboarding/pairing');
     } catch (error: any) {
       const code = error?.code as string | undefined;
 

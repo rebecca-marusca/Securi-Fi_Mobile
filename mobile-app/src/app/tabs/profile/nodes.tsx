@@ -53,7 +53,7 @@ export default function NodesScreen() {
           >
             <Text style={styles.nodeName}>{node.name}</Text>
             <TouchableOpacity onPress={() => handleRename(node)}>
-              <SymbolView name="pencil" size={18} tintColor={colors.blue} />
+              <SymbolView name="pencil" size={18} tintColor={colors.accent} />
             </TouchableOpacity>
           </View>
         ))}
