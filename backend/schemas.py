@@ -1,4 +1,5 @@
 import re
+from typing import Optional
 from pydantic import BaseModel, field_validator
 
 MAC_PATTERN = re.compile(r"^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$")
@@ -32,3 +33,6 @@ class RenameNodeRequest(BaseModel):
         if len(v) > 20:
             raise ValueError("nickname must be 20 characters or fewer")
         return v
+    
+class DismissEventRequest(BaseModel):
+    false_alarm: Optional[str] = None

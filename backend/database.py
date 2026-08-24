@@ -43,7 +43,7 @@ def remove_fcm_token(uid: str, token: str):
 
 
 # ============================================================
-# Homes (read + the one field the backend is allowed to write)
+# Homes
 # ============================================================
 
 def get_home_by_mac(master_mac: str) -> Optional[dict]:
@@ -94,7 +94,7 @@ def get_homes_for_user(uid: str) -> list[dict]:
 
 
 # ============================================================
-# Nodes (nickname only — everything else belongs to the server)
+# Nodes
 # ============================================================
 
 def get_node(hid: str, node_id: str) -> Optional[dict]:
@@ -106,7 +106,7 @@ def rename_node(hid: str, node_id: str, nickname: str):
 
 
 # ============================================================
-# Events (user-facing actions only)
+# Events
 # ============================================================
 
 def dismiss_event(eid: str, false_alarm_description: Optional[str] = None):
@@ -114,3 +114,7 @@ def dismiss_event(eid: str, false_alarm_description: Optional[str] = None):
     if false_alarm_description is not None:
         update_data["falseAlarm"] = false_alarm_description
     db.collection("events").document(eid).update(update_data)
+    
+def get_event(eid: str) -> Optional[dict]:
+    doc = db.collection("events").document(eid).get()
+    return doc.to_dict() if doc.exists else None
