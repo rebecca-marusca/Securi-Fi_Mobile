@@ -36,7 +36,10 @@ export function AlertProvider({ children }: { children: ReactNode }) {
     // return unsubscribe;
 
     // placeholder for now:
-    setActiveAlert(null);
+    setActiveAlert({
+      alertId: "test-123",
+      type: "fire", // Change to "break-in" or "flood" as needed
+    });
     setIsLoading(false);
   }, []);
 

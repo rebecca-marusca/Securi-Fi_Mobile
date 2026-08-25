@@ -21,15 +21,13 @@ export default function GetStartedScreen() {
       />
 
       <View style = {styles.buttonWrapper}>
-        <BlurView intensity={40} tint="light" style={styles.blurContainer}>
-          <Pressable style={styles.glassButton} onPress={() => router.push("/auth/email")}>
-            <LinearGradient
-              colors={["rgba(0,0,0,0.35)", "transparent"]}
-              style={styles.innerShadowGradient}
-            />
-            <Text style={styles.buttonText}>Get started</Text>
-        </Pressable>
-        </BlurView>
+        <Pressable style={styles.glassButton} onPress={() => router.push("/auth/email")}>
+          <LinearGradient
+            colors={["rgba(5, 33, 2, 0.25)", "transparent"]}
+            style={styles.innerShadowGradient}
+          />
+          <Text style={styles.buttonText}>Get started</Text>
+      </Pressable>
       </View>
     </SafeAreaView>
   );
