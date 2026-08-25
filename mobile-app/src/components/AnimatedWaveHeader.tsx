@@ -65,15 +65,15 @@ function WaveLayer({
 };
 
 type AnimatedWaveHeaderProps = {
-  color1?: string;
-  color2?: string;
-  color3?: string;
+  color1: string;
+  color2: string;
+  color3: string;
 };
 
 export default function AnimatedWaveHeader({
-  color3 = colors.greenWave3,
-  color2 = colors.greenWave2,
-  color1 = colors.greenWave1,
+  color3,
+  color2 ,
+  color1,
 }: AnimatedWaveHeaderProps) {
   return (
     <View style={styles.outerContainer}>

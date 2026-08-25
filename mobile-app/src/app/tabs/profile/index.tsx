@@ -6,9 +6,8 @@ import { colors } from "@/theme/colors";
 import { useRouter } from "expo-router";
 import { Alert, Image, Linking, ScrollView, StyleSheet, Text, View } from "react-native";
 
-const router = useRouter();
-
 export default function ProfileScreen() {
+  const router = useRouter();
   const { signOut } = useAuth();
   const { profile } = useUserProfile();
 

@@ -8,7 +8,10 @@ export const colors = {
   accent: '#3E7466',
   greenWave3: "#386A5A",
   greenWave2: "#2D5A4C",
-  greenWave1: "#1E4438"
+  greenWave1: "#1E4438",
+  redWave3: "#fc6161",
+  redWave2: "#ea4444",
+  redWave1: "#e20909"
 };
 
 export type ColorToken = keyof typeof colors;
