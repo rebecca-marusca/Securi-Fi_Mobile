@@ -60,10 +60,3 @@ export default function RootLayout() {
     </GestureHandlerRootView>
   );
 }
-
-// const styles = StyleSheet.create({
-//   symbol: {
-//     tintColor: colors.darkGreen,
-//     size: 20
-//   },
-// });

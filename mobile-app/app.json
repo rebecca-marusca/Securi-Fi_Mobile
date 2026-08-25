@@ -47,13 +47,15 @@
       "expo-status-bar",
       "@react-native-firebase/app",
       "@react-native-firebase/auth",
+      "@react-native-firebase/messaging",
       [
       "expo-image-picker",
       {
         "photosPermission": "Allow Securi-Fi to access your photos so you can set a profile picture."
       }
       ],
-      "./plugins/withFirebaseSPMFix.js"
+      "./plugins/withFirebaseSPMFix.js",
+      "./plugins/withDisableIosPush.js"
     ],
     "experiments": {
       "typedRoutes": true,

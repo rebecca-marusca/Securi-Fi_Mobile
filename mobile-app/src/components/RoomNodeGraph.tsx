@@ -5,13 +5,7 @@ import { colors } from "@/theme/colors";
 import { LinearGradient } from "expo-linear-gradient";
 import { RoomNode, DEFAULT_NODES } from "@/services/userProfile";
 
-interface RoomNodeGraphProps {
-  initialNodes?: RoomNode[];
-  style?: StyleProp<ViewStyle>;
-}
 const STORAGE_KEY = '@room_nodes_positions_v1';
-
-
 
 const NODE_RADIUS = 20;
 const RANGE_RADIUS = 80;
