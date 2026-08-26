@@ -1,6 +1,8 @@
+from datetime import datetime
+from enum import Enum
 import re
 from typing import Optional
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 MAC_PATTERN = re.compile(r"^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$")
 
@@ -36,3 +38,27 @@ class RenameNodeRequest(BaseModel):
     
 class DismissEventRequest(BaseModel):
     false_alarm: Optional[str] = None
+    
+class FcmTokenRequest(BaseModel):
+    token: str
+    
+class EventType(str, Enum):
+    INTRUSION = "intrusion"
+    FIRE = "fire"
+    GAS_LEAK = "gasLeak"
+    NODE_STATUS = "nodeStatus"
+    
+class EventDoc(BaseModel):
+    hid: str
+    type: EventType
+    started_at: datetime = Field(alias="startedAt")
+    ended_at: Optional[datetime] = Field(None, alias="endedAt")
+    peak_probability: Optional[float] = Field(None, alias="peakProbability")
+    avg_probability: Optional[float] = Field(None, alias="avgProbability")
+    dismissed_by_user: Optional[bool] = Field(None, alias="dismissedByUser")
+    false_alarm: Optional[bool] = Field(None, alias="falseAlarm")
+    node_id: Optional[str] = Field(None, alias="nodeId")
+    node_action: Optional[str] = Field(None, alias="nodeAction")
+
+    model_config = ConfigDict(populate_by_name=True)
+    

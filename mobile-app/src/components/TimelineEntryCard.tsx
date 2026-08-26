@@ -8,6 +8,8 @@ const TRUNCATE_LENGTH = 100;
 
 const TITLE_COLORS: Record<TimelineEntry['type'], string> = {
   break_in: '#B3453D',
+  fire: '#C43D2E',
+  gas_leak: '#D96827',
   nodes_on: colors.text,
   nodes_off: colors.text,
   small_movement: colors.text,

@@ -147,4 +147,8 @@ vite.config.ts.timestamp-*
 serviceAccountKey.json
 
 __pycache__/
-backend/routers/__pycache__/
+*.pyc
+.venv/
+venv/
+backend/.venv/
+backend/venv/
