@@ -3,15 +3,9 @@ import {View,Text,Pressable,StyleSheet,LayoutChangeEvent,StyleProp,ViewStyle,Pan
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors } from "@/theme/colors";
 import { LinearGradient } from "expo-linear-gradient";
-import {RoomNode, DEFAULT_NODES} from "@/services/userProfile";
+import { RoomNode, DEFAULT_NODES } from "@/services/userProfile";
 
-interface RoomNodeGraphProps {
-  initialNodes?: RoomNode[];
-  style?: StyleProp<ViewStyle>;
-}
 const STORAGE_KEY = '@room_nodes_positions_v1';
-
-
 
 const NODE_RADIUS = 20;
 const RANGE_RADIUS = 80;
@@ -158,9 +152,16 @@ const RoomNodeItem: React.FC<RoomNodeItemProps> = ({
   );
 };
 
+interface RoomNodeGraphProps {
+  nodes?: RoomNode[];
+  initialNodes?: RoomNode[];
+  style?: StyleProp<ViewStyle>;
+}
+
 /* Main Component ----------------------------------------------------------------- */
 
 const RoomNodeGraph: React.FC<RoomNodeGraphProps> = ({
+  nodes: externalNodes,
   initialNodes = DEFAULT_NODES,
   style,
 }) => {
@@ -168,6 +169,28 @@ const RoomNodeGraph: React.FC<RoomNodeGraphProps> = ({
   const [editMode, setEditMode] = useState(false);
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
   const [isLoaded, setIsLoaded] = useState(false);
+
+  // Sync external DB node nicknames while preserving positions
+  useEffect(() => {
+    if (!externalNodes || externalNodes.length === 0) return;
+    const defaultPositions = [
+      { x: 0.28, y: 0.45 },
+      { x: 0.72, y: 0.28 },
+      { x: 0.58, y: 0.75 },
+    ];
+    setNodes((prev) => {
+      return externalNodes.map((extNode, idx) => {
+        const existing = prev.find((p) => p.id === extNode.id);
+        const fallbackPos = defaultPositions[idx % defaultPositions.length];
+        return {
+          id: extNode.id,
+          name: extNode.name,
+          x: existing ? existing.x : extNode.x ?? fallbackPos.x,
+          y: existing ? existing.y : extNode.y ?? fallbackPos.y,
+        };
+      });
+    });
+  }, [externalNodes]);
 
   // 1. Load saved node positions on mount
   useEffect(() => {

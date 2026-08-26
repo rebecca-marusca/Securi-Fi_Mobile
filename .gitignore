@@ -144,3 +144,10 @@ vite.config.ts.timestamp-*
 
 .DS_Store
 serviceAccountKey.json
+
+__pycache__/
+*.pyc
+.venv/
+venv/
+backend/.venv/
+backend/venv/

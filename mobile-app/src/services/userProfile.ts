@@ -28,10 +28,6 @@ export const defaultNotificationPrefs: NotificationPrefs = {
   productUpdates: false,
 };
 
-export type ArmedNode = { armed: boolean; text: string };
-
-export const armedNodes: ArmedNode = { armed: true, text: "All ARMED"};
-
 export type RoomNode = {
   id: string;
   name: string;

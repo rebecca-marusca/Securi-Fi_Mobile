@@ -68,7 +68,7 @@ export default function EmailScreen() {
 
     try {
       await signInWithEmailAndPassword(getAuth(), email.trim(), password);
-      // Success: onAuthStateChanged in root layout handles the redirect.
+      router.replace('/tabs/home');
     } catch (error: any) {
       const code = error?.code as string | undefined;
 

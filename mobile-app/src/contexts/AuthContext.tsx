@@ -13,6 +13,10 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import {
+  registerForPushNotifications,
+  unregisterPushNotifications,
+} from "@/services/notifications";
 
 type AuthUser = ReturnType<typeof getAuth>["currentUser"];
 
@@ -52,13 +56,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = async (email: string, password: string) => {
     await createUserWithEmailAndPassword(getAuth(), email, password);
+    await registerForPushNotifications();
   };
 
   const signIn = async (email: string, password: string) => {
     await signInWithEmailAndPassword(getAuth(), email, password);
+    await registerForPushNotifications();
   };
 
   const signOut = async () => {
+    await unregisterPushNotifications();
     await firebaseSignOut(getAuth());
   };
 

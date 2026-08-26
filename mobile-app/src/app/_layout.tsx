@@ -6,6 +6,10 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SplashOverlay } from "@/components/splash-overlay";
 import { AlertProvider, useActiveAlert } from "@/contexts/AlertContext";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { Redirect, Slot, useSegments } from "expo-router";
+import { useFonts } from "expo-font";
+import { GestureHandlerRootView } from 'react-native-gesture-handler'
+
 
 function RootLayoutNav() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
@@ -28,6 +32,12 @@ function RootLayoutNav() {
 
     const inAuthGroup = segments[0] === "auth";
     const inAlertGroup = segments[0] === "alert";
+  if (!isAuthenticated) {
+    if (segments[0] !== 'auth') {
+      return <Redirect href="/auth/getStarted" />;
+    }
+    return null;
+  }
 
     if (activeAlert) {
       if (!inAlertGroup) {
@@ -50,6 +60,12 @@ function RootLayoutNav() {
   }
 
   return <Slot />;
+  const isAllowedGroup = ['tabs', 'onboarding', 'alert'].includes(segments[0]);
+  if (!isAllowedGroup) {
+    return <Redirect href="/tabs/home" />;
+  }
+
+  return null;
 }
 
 export default function RootLayout() {

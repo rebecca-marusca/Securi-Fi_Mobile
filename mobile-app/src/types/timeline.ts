@@ -3,7 +3,9 @@ export type TimelineEntryType =
   | 'nodes_on'
   | 'nodes_off'
   | 'small_movement'
-  | 'false_alarm';
+  | 'false_alarm'
+  | 'fire'
+  | 'gas_leak';
 
 export type TimelineEntry = {
   id: string;
