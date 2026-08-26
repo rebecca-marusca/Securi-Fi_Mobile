@@ -90,7 +90,11 @@ const HomeScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <AnimatedWaveHeader />
+      <AnimatedWaveHeader 
+        color1={colors.greenWave1}
+        color2={colors.greenWave2}
+        color3={colors.greenWave3}
+      />
       <View style={styles.content}>
         <View style={styles.headerTextContainer}>
           <Text style={styles.subtitle}>{greeting}, {profile?.displayName}! </Text>

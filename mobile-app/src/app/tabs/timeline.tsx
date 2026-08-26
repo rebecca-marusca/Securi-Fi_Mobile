@@ -183,7 +183,11 @@ export default function TimelineScreen() {
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <AnimatedWaveHeader />
+        <AnimatedWaveHeader 
+          color1={colors.greenWave1}
+          color2={colors.greenWave2}
+          color3={colors.greenWave3}
+        />
         {isLoading ? (
           <ActivityIndicator size="large" color={colors.accent} style={styles.loader} />
         ) : entries.length > 0 ? (
