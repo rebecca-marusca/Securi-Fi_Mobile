@@ -44,7 +44,7 @@ export const TimelineSheet = forwardRef<BottomSheet>((_, ref) => {
       handleIndicatorStyle={styles.handleIndicator}
     >
       <BottomSheetView style={styles.container}>
-        <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.content}>
           {latestEntry && (
             <TimelineEntryCard
               key={latestEntry.id}
@@ -52,7 +52,7 @@ export const TimelineSheet = forwardRef<BottomSheet>((_, ref) => {
               isLast={true}
             />
           )}
-        </ScrollView>
+        </View>
       </BottomSheetView>
     </BottomSheet>
   );
@@ -68,7 +68,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  scrollContent: {
+  content: {
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 40,
