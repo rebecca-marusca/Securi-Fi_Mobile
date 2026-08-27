@@ -1,7 +1,7 @@
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { useAuth } from "@/contexts/AuthContext";
 import { subscribeToUserHomeLinks } from "@/services/homes";
-import { renameNode, subscribeToNodesForHome, type Node } from "@/services/nodes";
+import { renameNode, subscribeToNodesForHome, type FirestoreNode } from "@/services/nodes";
 import { colors } from "@/theme/colors";
 import { SymbolView } from "expo-symbols";
 import { useEffect, useState } from "react";
@@ -14,19 +14,47 @@ import {
   View,
 } from "react-native";
 
+function ArmedBadge({ armed, requestedArmed }: { armed: boolean; requestedArmed: boolean }) {
+  const isPending = armed !== requestedArmed;
+  const label = isPending
+    ? requestedArmed ? "Arming…" : "Disarming…"
+    : armed ? "Armed" : "Disarmed";
+  const bg = armed ? colors.accent : "#C4C4C7";
+  return (
+    <View style={[badgeStyles.badge, { backgroundColor: bg }]}>
+      <Text style={badgeStyles.text}>{label}</Text>
+    </View>
+  );
+}
+
+function WarningDots({ warnings }: { warnings: FirestoreNode["warnings"] | undefined }) {
+  if (!warnings) return null;
+  const active = [
+    warnings.lowBattery && "Low battery",
+    warnings.notTransmitting && "Not transmitting",
+    warnings.signalWeak && "Weak signal",
+  ].filter(Boolean) as string[];
+  if (active.length === 0) return null;
+  return (
+    <View style={badgeStyles.warningRow}>
+      {active.map((w) => (
+        <View key={w} style={badgeStyles.warningBadge}>
+          <Text style={badgeStyles.warningText}>{w}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
 export default function NodesScreen() {
   const { user } = useAuth();
-  const [nodes, setNodes] = useState<Node[]>([]);
+  const [nodes, setNodes] = useState<FirestoreNode[]>([]);
   const [hid, setHid] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
     const unsubscribe = subscribeToUserHomeLinks(user.uid, (links) => {
-      if (links.length > 0) {
-        setHid(links[0].hid);
-      } else {
-        setHid(null);
-      }
+      setHid(links[0]?.hid ?? null);
     });
     return unsubscribe;
   }, [user]);
@@ -40,21 +68,18 @@ export default function NodesScreen() {
     return unsubscribe;
   }, [hid]);
 
-  const handleRename = (node: any) => {
-    const id = node.nodeId || node.id;
-    const currentName = node.nickname || node.name;
-    const hid = node.hid || node.homeId;
-    
+  const handleRename = (node: FirestoreNode) => {
+    const nodeHid = node.hid;
     Alert.prompt(
       "Rename node",
       undefined,
       async (newName) => {
-        if (newName && newName.trim() && id && hid) {
-          await renameNode(hid, id, newName.trim());
+        if (newName && newName.trim() && nodeHid) {
+          await renameNode(nodeHid, node.nodeId, newName.trim());
         }
       },
       "plain-text",
-      currentName,
+      node.nickname,
     );
   };
 
@@ -67,15 +92,24 @@ export default function NodesScreen() {
       <ScreenHeader title="Configure nodes" />
 
       <View style={styles.card}>
-        {nodes.map((node: any, index) => (
+        {nodes.map((node, index) => (
           <View
             key={node.nodeId || node.id || index}
             style={[styles.row, index === nodes.length - 1 && styles.lastRow]}
           >
-            <Text style={styles.nodeName}>{node.nickname || node.name}</Text>
-            <TouchableOpacity onPress={() => handleRename(node)}>
-              <SymbolView name="pencil" size={18} tintColor={colors.accent} />
-            </TouchableOpacity>
+            <View style={styles.nodeInfo}>
+              <View style={styles.nameRow}>
+                <Text style={styles.nodeName}>{node.nickname}</Text>
+                <Text style={styles.roleTag}>{node.role}</Text>
+              </View>
+              <WarningDots warnings={node.warnings} />
+            </View>
+            <View style={styles.rightCol}>
+              <ArmedBadge armed={node.armed} requestedArmed={node.requestedArmed} />
+              <TouchableOpacity onPress={() => handleRename(node)} style={styles.renameBtn}>
+                <SymbolView name="pencil" size={18} tintColor={colors.accent} />
+              </TouchableOpacity>
+            </View>
           </View>
         ))}
       </View>
@@ -86,6 +120,36 @@ export default function NodesScreen() {
     </ScrollView>
   );
 }
+
+const badgeStyles = StyleSheet.create({
+  badge: {
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  text: {
+    fontFamily: "SF-Pro-Text-Semibold",
+    fontSize: 11,
+    color: colors.base,
+  },
+  warningRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 4,
+    marginTop: 4,
+  },
+  warningBadge: {
+    backgroundColor: "#FFC107",
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  warningText: {
+    fontFamily: "SF-Pro-Text-Regular",
+    fontSize: 10,
+    color: "#333",
+  },
+});
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.base, paddingTop: 60 },
@@ -106,10 +170,32 @@ const styles = StyleSheet.create({
   lastRow: {
     borderBottomWidth: 0,
   },
+  nodeInfo: {
+    flex: 1,
+    marginRight: 12,
+  },
+  nameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
   nodeName: {
     fontFamily: "SF-Pro-Text-Regular",
     fontSize: 16,
     color: colors.text,
+  },
+  roleTag: {
+    fontFamily: "SF-Pro-Text-Regular",
+    fontSize: 11,
+    color: colors.textMuted,
+  },
+  rightCol: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  renameBtn: {
+    padding: 4,
   },
   addButton: {
     backgroundColor: colors.accent,
@@ -128,3 +214,4 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
 });
+

@@ -1,29 +1,24 @@
 import {
   collection,
-  doc,
   getFirestore,
   onSnapshot,
   query,
-  updateDoc,
   where,
 } from "@react-native-firebase/firestore";
 import { apiFetch } from '@/services/api';
+import type { Node } from '@/types/firestore';
 
-export type Node = {
-  id: string;
-  name: string;
-  room: string;
-  status: "online" | "offline";
-};
+/** Shape as stored in Firestore — use this wherever you need the full node doc. */
+export type FirestoreNode = Node & { id: string };
 
 export function subscribeToNodesForHome(
   hid: string,
-  onChange: (nodes: any[]) => void
+  onChange: (nodes: FirestoreNode[]) => void
 ) {
   const q = query(collection(getFirestore(), 'nodes'), where('hid', '==', hid));
   return onSnapshot(
     q,
-    (snapshot) => onChange(snapshot.docs.map((d) => ({ id: d.id, ...d.data() }))),
+    (snapshot) => onChange(snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as FirestoreNode))),
     (error) => console.error('subscribeToNodesForHome error:', error)
   );
 }
@@ -39,3 +34,22 @@ export async function renameNode(hid: string, nodeId: string, nickname: string) 
   }
   return response.json();
 }
+
+export async function armNode(hid: string, nodeId: string) {
+  const response = await apiFetch(`/nodes/${hid}/${nodeId}/arm`, { method: 'POST' });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.detail ?? 'Failed to arm node');
+  }
+  return response.json();
+}
+
+export async function disarmNode(hid: string, nodeId: string) {
+  const response = await apiFetch(`/nodes/${hid}/${nodeId}/disarm`, { method: 'POST' });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.detail ?? 'Failed to disarm node');
+  }
+  return response.json();
+}
+

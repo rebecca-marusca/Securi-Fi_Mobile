@@ -1,12 +1,8 @@
 import { useEffect } from "react";
-import { Slot, useRouter, useSegments } from "expo-router";
-import { useFonts } from "expo-font";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
-
 import { SplashOverlay } from "@/components/splash-overlay";
 import { AlertProvider, useActiveAlert } from "@/contexts/AlertContext";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
-import { Redirect, Slot, useSegments } from "expo-router";
+import { useRouter, Slot, useSegments } from "expo-router";
 import { useFonts } from "expo-font";
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 
@@ -32,23 +28,17 @@ function RootLayoutNav() {
 
     const inAuthGroup = segments[0] === "auth";
     const inAlertGroup = segments[0] === "alert";
-  if (!isAuthenticated) {
-    if (segments[0] !== 'auth') {
-      return <Redirect href="/auth/getStarted" />;
-    }
-    return null;
-  }
 
-    if (activeAlert) {
+    if (!isAuthenticated) {
+      if (!inAuthGroup) {
+        router.replace("/auth/getStarted");
+      }
+    } else if (activeAlert) {
       if (!inAlertGroup) {
         router.replace({
           pathname: "/alert/[alertId]",
           params: { alertId: activeAlert.alertId },
         });
-      }
-    } else if (!isAuthenticated) {
-      if (!inAuthGroup) {
-        router.replace("/auth/getStarted");
       }
     } else if (inAuthGroup || inAlertGroup) {
       router.replace("/tabs/home");
@@ -60,12 +50,6 @@ function RootLayoutNav() {
   }
 
   return <Slot />;
-  const isAllowedGroup = ['tabs', 'onboarding', 'alert'].includes(segments[0]);
-  if (!isAllowedGroup) {
-    return <Redirect href="/tabs/home" />;
-  }
-
-  return null;
 }
 
 export default function RootLayout() {

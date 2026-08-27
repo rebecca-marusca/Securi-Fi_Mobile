@@ -2,8 +2,6 @@ import type { Timestamp } from "@react-native-firebase/firestore";
 
 export type Home = {
   masterMac: string;
-  armed: boolean;
-  requestedArmed: boolean;
   activeEventId: string | null;
   lastSeen: Timestamp;
   registeredAt: Timestamp;
@@ -15,18 +13,26 @@ export type NodeWarnings = {
   signalWeak: boolean;
 };
 
+export type NodeSensors = {
+  flame: boolean;
+  gas: boolean;
+  batteryPct: number | null;
+};
+
 export type Node = {
   hid: string;
   nodeId: string;
   nickname: string;
   role: "master" | "slave";
+  armed: boolean;
+  requestedArmed: boolean;
   warnings: NodeWarnings;
 };
 
 export type CacheReading = {
   probability: number;
   state: string;
-  sensors: { flame: boolean; gas: boolean };
+  sensors: NodeSensors;
   rawMq2Reading: number;
   movementPct: number;
 };
@@ -55,8 +61,6 @@ type BaseEvent = {
 type IntrusionEvent = BaseEvent & {
   type: 'intrusion';
   endedAt?: Timestamp;
-  peakProbability: number;
-  avgProbability: number;
 };
 
 type HazardEvent = BaseEvent & {

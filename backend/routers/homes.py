@@ -33,7 +33,7 @@ async def pair_home(body: PairHomeRequest, uid: str = Depends(get_current_uid)):
 async def arm_home(hid: str, uid: str = Depends(get_current_uid)):
     if not db.user_is_linked_to_home(uid, hid):
         raise HTTPException(status_code=403, detail="Not linked to this home")
-    db.set_requested_armed(hid, True)
+    db.set_nodes_requested_armed(hid, True)
     return {"status": "requested", "requestedArmed": True}
 
 
@@ -41,5 +41,5 @@ async def arm_home(hid: str, uid: str = Depends(get_current_uid)):
 async def disarm_home(hid: str, uid: str = Depends(get_current_uid)):
     if not db.user_is_linked_to_home(uid, hid):
         raise HTTPException(status_code=403, detail="Not linked to this home")
-    db.set_requested_armed(hid, False)
+    db.set_nodes_requested_armed(hid, False)
     return {"status": "requested", "requestedArmed": False}
