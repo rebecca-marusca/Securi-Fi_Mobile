@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, Pressable, StyleSheet, LayoutChangeEvent, StyleProp, ViewStyle, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
@@ -16,13 +16,16 @@ export interface RoomNodeWithColor extends RoomNode {
 interface RoomNodeMapProps {
   initialNodes?: RoomNodeWithColor[];
   style?: StyleProp<ViewStyle>;
+  /** Disables node dragging and hides the edit toggle */
+  isEmergency?: boolean;
 }
 
 const STORAGE_KEY = '@room_nodes_positions_v1';
 
-const RoomNodeMap: React.FC<RoomNodeMapProps> = ({
+export const RoomNodeMap: React.FC<RoomNodeMapProps> = ({
   initialNodes = [],
   style,
+  isEmergency = false,
 }) => {
   // --- STATE & REFS ---
   const [nodes, setNodes] = useState<RoomNodeWithColor[]>(initialNodes);
@@ -30,11 +33,10 @@ const RoomNodeMap: React.FC<RoomNodeMapProps> = ({
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
   const [isLoaded, setIsLoaded] = useState<boolean>(false);
   
-  // Active node selected for the Bottom Sheet control modal
   const [selectedNode, setSelectedNode] = useState<SelectedNodeData | null>(null);
-
-  // BottomSheet ref
   const sheetRef = useRef<BottomSheetModal>(null);
+
+  const activeEditMode = !isEmergency && editMode;
 
   // --- 1. LOAD & MERGE POSITIONS ON MOUNT ---
   useEffect(() => {
@@ -45,8 +47,6 @@ const RoomNodeMap: React.FC<RoomNodeMapProps> = ({
         if (savedJson) {
           const savedNodes: { id: string; x: number; y: number }[] = JSON.parse(savedJson);
           
-          // Merge stored (X, Y) positions with fresh initialNodes props
-          // This keeps coordinates saved while updating colors/names from HomeScreen
           const mergedNodes = initialNodes.map((propNode) => {
             const savedPosition = savedNodes.find((saved) => saved.id === propNode.id);
             return {
@@ -71,7 +71,7 @@ const RoomNodeMap: React.FC<RoomNodeMapProps> = ({
     loadSavedPositions();
   }, []);
 
-  // --- 2. SYNC PROP CHANGES (e.g. status/color updates from HomeScreen) ---
+  // --- 2. SYNC PROP CHANGES ---
   useEffect(() => {
     if (!isLoaded) return;
 
@@ -93,7 +93,6 @@ const RoomNodeMap: React.FC<RoomNodeMapProps> = ({
 
     async function savePositions() {
       try {
-        // Save only coordinates and ID to keep storage light
         const positionsToSave = nodes.map((node) => ({
           id: node.id,
           x: node.x,
@@ -111,7 +110,6 @@ const RoomNodeMap: React.FC<RoomNodeMapProps> = ({
   // --- 4. OPEN BOTTOM SHEET WHEN A NODE IS TAPPED ---
   useEffect(() => {
     if (selectedNode) {
-      // Small timeout ensures the bottom sheet has mounted with data before expanding
       const timer = setTimeout(() => {
         sheetRef.current?.present();
       }, 50);
@@ -121,20 +119,18 @@ const RoomNodeMap: React.FC<RoomNodeMapProps> = ({
 
   // --- HANDLERS ---
   
-  // Canvas layout measurement
   const handleCanvasLayout = (e: LayoutChangeEvent) => {
     const { width, height } = e.nativeEvent.layout;
     setCanvasSize({ width, height });
   };
 
-  // Toggle layout drag mode
   const toggleEditMode = () => {
+    if (isEmergency) return; // Guard clause against toggling during emergency
     setEditMode(!editMode);
   };
 
-  // Node press handler
   const handleNodePress = (node: RoomNodeWithColor) => {
-    if (editMode) return; // Disable sheet modal while dragging node positions
+    if (activeEditMode) return;
 
     setSelectedNode({
       id: node.id,
@@ -143,8 +139,9 @@ const RoomNodeMap: React.FC<RoomNodeMapProps> = ({
     });
   };
 
-  // Drag update handler
   const handleNodeMove = (id: string, newX: number, newY: number) => {
+    if (!activeEditMode) return;
+    
     setNodes((prevNodes) =>
       prevNodes.map((node) =>
         node.id === id ? { ...node, x: newX, y: newY } : node
@@ -152,7 +149,6 @@ const RoomNodeMap: React.FC<RoomNodeMapProps> = ({
     );
   };
 
-  // Restart handler
   const handleRestart = (nodeId: string) => {
     const target = nodes.find((n) => n.id === nodeId);
     Alert.alert('Node Action', `Restarting ${target?.name || 'node'}...`);
@@ -160,7 +156,6 @@ const RoomNodeMap: React.FC<RoomNodeMapProps> = ({
     setSelectedNode(null);
   };
 
-  // Shutdown handler
   const handleShutdown = (nodeId: string) => {
     const target = nodes.find((n) => n.id === nodeId);
     Alert.alert('Node Action', `Shutting down ${target?.name || 'node'}...`);
@@ -172,17 +167,19 @@ const RoomNodeMap: React.FC<RoomNodeMapProps> = ({
   return (
     <>
       <View style={[styles.card, style]}>
-        {/* Header Toggle Button */}
-        <View style={styles.cardTopRow} pointerEvents="box-none">
-          <Pressable
-            style={[styles.editBtn, editMode && styles.editBtnActive]}
-            onPress={toggleEditMode}
-          >
-            <Text style={[styles.editBtnText, editMode && styles.editBtnTextActive]}>
-              {editMode ? 'Done' : 'Edit'}
-            </Text>
-          </Pressable>
-        </View>
+        {/* Render header edit toggle ONLY when NOT in emergency mode */}
+        {!isEmergency && (
+          <View style={styles.cardTopRow} pointerEvents="box-none">
+            <Pressable
+              style={[styles.editBtn, activeEditMode && styles.editBtnActive]}
+              onPress={toggleEditMode}
+            >
+              <Text style={[styles.editBtnText, activeEditMode && styles.editBtnTextActive]}>
+                {activeEditMode ? 'Done' : 'Edit'}
+              </Text>
+            </Pressable>
+          </View>
+        )}
 
         {/* Map Canvas */}
         <View style={styles.canvas} onLayout={handleCanvasLayout}>
@@ -192,7 +189,7 @@ const RoomNodeMap: React.FC<RoomNodeMapProps> = ({
                 key={node.id}
                 node={node}
                 canvasSize={canvasSize}
-                editMode={editMode}
+                editMode={activeEditMode}
                 onNodePress={handleNodePress}
                 onNodeMove={handleNodeMove}
               />
@@ -211,13 +208,25 @@ const RoomNodeMap: React.FC<RoomNodeMapProps> = ({
   );
 };
 
+// --- MODE-SPECIFIC EXPORTS ---
+
+/** Standard editable room node map */
+export const RoomNodeMapNormal: React.FC<Omit<RoomNodeMapProps, 'isEmergency'>> = (props) => (
+  <RoomNodeMap {...props} isEmergency={false} />
+);
+
+/** Emergency room node map with drag controls removed */
+export const RoomNodeMapEmergency: React.FC<Omit<RoomNodeMapProps, 'isEmergency'>> = (props) => (
+  <RoomNodeMap {...props} isEmergency={true} />
+);
+
 const styles = StyleSheet.create({
   card: {
     width: '100%',
     backgroundColor: colors.bgSecondary2,
     borderRadius: 20,
     borderWidth: 3,
-    borderColor: colors.accent,
+    borderColor: colors.noMovement,
     overflow: 'hidden',
   },
   cardTopRow: {

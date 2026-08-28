@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import AnimatedWaveHeader from '@/components/AnimatedWaveHeader';
 import { colors } from "@/theme/colors";
-import RoomNodeMap from '../../components/homepage-map/RoomNodeMap';
+import RoomNodeMapNormal from '@/components/homepage-map/RoomNodeMap';
 import { LinearGradient } from "expo-linear-gradient";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { FinalToggleRow } from "@/components/ToggleRow";
@@ -43,9 +43,9 @@ const HomeScreen: React.FC = () => {
           <Text style={styles.subtitle}>{greeting}, {profile?.displayName}! </Text>
         </View>
 
-        <RoomNodeMap
+        <RoomNodeMapNormal
           initialNodes={[
-            { id: 'kitchen', name: 'Kitchen', x: 0.28, y: 0.45, color: colors.redWave1},
+            { id: 'kitchen', name: 'Kitchen', x: 0.28, y: 0.45, color: colors.slightMovement},
             { id: 'living-room', name: 'Living room', x: 0.72, y: 0.28, color: colors.slightMovement},
             { id: 'bedroom', name: 'Bedroom', x: 0.58, y: 0.75 },
           ]}
