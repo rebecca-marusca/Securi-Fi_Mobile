@@ -11,7 +11,9 @@ export const colors = {
   greenWave1: "#1E4438",
   redWave3: "#fc6161",
   redWave2: "#ea4444",
-  redWave1: "#e20909"
+  redWave1: "#e20909", // movement detected
+  slightMovement: "#f8b04b", // slight movement
+  noMovement:  'rgb(64, 144, 79)'
 };
 
 export type ColorToken = keyof typeof colors;

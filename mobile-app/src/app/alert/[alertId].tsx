@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { StyleSheet, Text, View, Pressable} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import RoomNodeGraph from '@/components/RoomNodeGraph';
+import RoomNodeMap from '@/components/homepage-map/RoomNodeMap';
 import { useRef, useState } from 'react'
 import BottomSheet from "@gorhom/bottom-sheet"
 import { TimelineSheet } from '@/components/TimelineSheet';
@@ -31,11 +31,11 @@ export default function AlertScreen() {
             <Text style={styles.subtitle}>BREAK-IN DETECTED</Text>
         </View>
 
-        <RoomNodeGraph
+        <RoomNodeMap
           initialNodes={[
-            { id: 'kitchen', name: 'kitchen', x: 0.28, y: 0.45 },
-            { id: 'living-room', name: 'living room', x: 0.72, y: 0.28 },
-            { id: 'bedroom', name: 'bedroom', x: 0.58, y: 0.75 },
+            { id: 'kitchen', name: 'Kitchen', x: 0.28, y: 0.45 },
+            { id: 'living-room', name: 'Living room', x: 0.72, y: 0.28 },
+            { id: 'bedroom', name: 'Bedroom', x: 0.58, y: 0.75 },
           ]}
         />
 

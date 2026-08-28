@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, ScrollView, Image } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import AnimatedWaveHeader from '@/components/AnimatedWaveHeader';
-import { SafeAreaView } from "react-native-safe-area-context";
-import SecuriFiTextLightGreen from "../../../assets/images/securi-fi-text-lightGreen.png";
 import { colors } from "@/theme/colors";
-import RoomNodeGraph from '../../components/RoomNodeGraph';
+import RoomNodeMap from '../../components/homepage-map/RoomNodeMap';
 import { LinearGradient } from "expo-linear-gradient";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { FinalToggleRow } from "@/components/ToggleRow";
@@ -27,13 +25,6 @@ const HomeScreen: React.FC = () => {
     armedNodes
   );
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setGreeting(getGreeting());
-    }, 60_000);
-    return () => clearInterval(interval);
-  }, []);
-
   const handleToggle = async (key: keyof ArmedNode, value: boolean) => {
     if (!user) return;
     const updated = { ...prefs, [key]: value };
@@ -41,7 +32,6 @@ const HomeScreen: React.FC = () => {
   }
 
   return (
-
     <View style={styles.container}>
       <AnimatedWaveHeader 
         color1={colors.greenWave1}
@@ -53,11 +43,11 @@ const HomeScreen: React.FC = () => {
           <Text style={styles.subtitle}>{greeting}, {profile?.displayName}! </Text>
         </View>
 
-        <RoomNodeGraph
+        <RoomNodeMap
           initialNodes={[
-            { id: 'kitchen', name: 'kitchen', x: 0.28, y: 0.45 },
-            { id: 'living-room', name: 'living room', x: 0.72, y: 0.28 },
-            { id: 'bedroom', name: 'bedroom', x: 0.58, y: 0.75 },
+            { id: 'kitchen', name: 'Kitchen', x: 0.28, y: 0.45, color: colors.redWave1},
+            { id: 'living-room', name: 'Living room', x: 0.72, y: 0.28, color: colors.slightMovement},
+            { id: 'bedroom', name: 'Bedroom', x: 0.58, y: 0.75 },
           ]}
         />
 
@@ -114,7 +104,7 @@ const styles = StyleSheet.create({
     fontFamily: "SF-Pro-Text-Semibold",
   },
   statusPill: {
-    backgroundColor: 'rgb(64, 144, 79)',
+    backgroundColor:colors.noMovement,
     paddingVertical: 10,
     paddingHorizontal: 24,
     borderRadius: 12,

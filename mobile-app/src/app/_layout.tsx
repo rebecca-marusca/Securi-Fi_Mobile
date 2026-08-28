@@ -1,11 +1,11 @@
 import { useEffect } from "react";
-import { Slot, useRouter, useSegments } from "expo-router";
-import { useFonts } from "expo-font";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
-
 import { SplashOverlay } from "@/components/splash-overlay";
 import { AlertProvider, useActiveAlert } from "@/contexts/AlertContext";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { useRouter, Slot, useSegments } from "expo-router";
+import { useFonts } from "expo-font";
+import { GestureHandlerRootView } from 'react-native-gesture-handler'
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 
 function RootLayoutNav() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
@@ -28,19 +28,20 @@ function RootLayoutNav() {
 
     const inAuthGroup = segments[0] === "auth";
     const inAlertGroup = segments[0] === "alert";
+    const inTabsGroup = segments[0] === "tabs";
 
-    if (activeAlert) {
+    if (!isAuthenticated) {
+      if (!inAuthGroup) {
+        router.replace("/auth/getStarted");
+      }
+    } else if (activeAlert) {
       if (!inAlertGroup) {
         router.replace({
           pathname: "/alert/[alertId]",
           params: { alertId: activeAlert.alertId },
         });
       }
-    } else if (!isAuthenticated) {
-      if (!inAuthGroup) {
-        router.replace("/auth/getStarted");
-      }
-    } else if (inAuthGroup || inAlertGroup) {
+    } else if (!inTabsGroup) {
       router.replace("/tabs/home");
     }
   }, [isAuthenticated, activeAlert, isLoading, segments]);
@@ -55,11 +56,13 @@ function RootLayoutNav() {
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <AuthProvider>
-        <AlertProvider>
-          <RootLayoutNav />
-        </AlertProvider>
-      </AuthProvider>
+      <BottomSheetModalProvider>
+        <AuthProvider>
+          <AlertProvider>
+            <RootLayoutNav />
+          </AlertProvider>
+        </AuthProvider>
+      </BottomSheetModalProvider>
     </GestureHandlerRootView>
   );
 }
