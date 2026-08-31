@@ -16,15 +16,27 @@ import {
 
 function ArmedBadge({ armed, requestedArmed }: { armed: boolean; requestedArmed: boolean }) {
   const isPending = armed !== requestedArmed;
-  const label = isPending
-    ? requestedArmed ? "Arming…" : "Disarming…"
-    : armed ? "Armed" : "Disarmed";
-  const bg = armed ? colors.accent : "#707070";
+  
+  let label: string;
+  let bg: string;
+
+  if (isPending) {
+    label = requestedArmed ? "Arming..." : "Disarming...";
+    bg = colors.intermediate;
+  } else if (armed) {
+    label = "Armed";
+    bg = colors.accent;
+  } else {
+    label = "Disarmed";
+    bg = colors.black;
+  }
+
   return (
     <View style={[badgeStyles.badge, { backgroundColor: bg }]}>
       <Text style={badgeStyles.text}>{label}</Text>
     </View>
   );
+
 }
 
 function WarningDots({ warnings }: { warnings: FirestoreNode["warnings"] | undefined }) {
