@@ -19,7 +19,7 @@ function ArmedBadge({ armed, requestedArmed }: { armed: boolean; requestedArmed:
   const label = isPending
     ? requestedArmed ? "Arming…" : "Disarming…"
     : armed ? "Armed" : "Disarmed";
-  const bg = armed ? colors.accent : "#C4C4C7";
+  const bg = armed ? colors.accent : "#707070";
   return (
     <View style={[badgeStyles.badge, { backgroundColor: bg }]}>
       <Text style={badgeStyles.text}>{label}</Text>
@@ -107,7 +107,7 @@ export default function NodesScreen() {
             <View style={styles.rightCol}>
               <ArmedBadge armed={node.armed} requestedArmed={node.requestedArmed} />
               <TouchableOpacity onPress={() => handleRename(node)} style={styles.renameBtn}>
-                <SymbolView name="pencil" size={18} tintColor={colors.accent} />
+                <SymbolView name="pencil.line" size={20} tintColor={colors.accent} />
               </TouchableOpacity>
             </View>
           </View>
@@ -155,7 +155,10 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.base, paddingTop: 60 },
   content: { paddingHorizontal: 24, paddingBottom: 40 },
   card: {
-    backgroundColor: colors.white,
+    marginTop: 24,
+    backgroundColor: colors.bgSecondary1,
+    borderColor: colors.bgSecondary2,
+    borderWidth: 1,
     borderRadius: 16,
     paddingHorizontal: 16,
   },
@@ -165,7 +168,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 16,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#e0e5df",
+    borderBottomColor: colors.text,
   },
   lastRow: {
     borderBottomWidth: 0,
@@ -176,7 +179,7 @@ const styles = StyleSheet.create({
   },
   nameRow: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "baseline",
     gap: 8,
   },
   nodeName: {

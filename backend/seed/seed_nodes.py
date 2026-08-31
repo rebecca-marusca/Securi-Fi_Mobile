@@ -32,10 +32,11 @@ nodes = [
             "notTransmitting": False,
             "signalWeak": False,
         },
-        "armed": True,
+        "armed": False,
         "requestedArmed": True,  # mismatch — exercises "Arming…" UI state
     },
     {
+        "nodeId": NODE_IDS[2],
         "hid": HID,
         "nickname": "Kitchen",
         "role": "slave",
@@ -44,8 +45,8 @@ nodes = [
             "notTransmitting": False,
             "signalWeak": True,   # exercise the weak-signal warning UI
         },
-        "armed": True,
-        "requestedArmed": True,  # in sync — settled "disarmed" state
+        "armed": False,
+        "requestedArmed": False,  # in sync — settled "disarmed" state
     },
 ]
 

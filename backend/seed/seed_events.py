@@ -26,28 +26,27 @@ events = [
         "startedAt": ts(2),
         "dismissedByUser": False,
         "falseAlarm": False,
-        # endedAt intentionally omitted — represents "still active"
+        "endedAt": ts(1)
     },
-    # --- Intrusion: past, dismissed, real ---
+    # --- Intrusion
     {
         "hid": HID,
         "type": "intrusion",
         "startedAt": ts(180),
         "endedAt": ts(175),
-        "dismissedByUser": True,
+        "dismissedByUser": False,
         "falseAlarm": False,
     },
-    # --- Intrusion: past, dismissed, false alarm (string variant, to
-    #     exercise falseAlarm's `boolean | string` typing on the frontend) ---
+    # --- Intrusion: past, dismissed, flagged as false alarm ---
     {
         "hid": HID,
         "type": "intrusion",
         "startedAt": ts(60 * 24),  # 1 day ago
         "endedAt": ts(60 * 24 - 5),
         "dismissedByUser": True,
-        "falseAlarm": "Cat set off the sensor",
+        "falseAlarm": True,
     },
-    # --- Fire: active, with a raw sensor reading ---
+    # --- Fire: active ---
     {
         "hid": HID,
         "type": "fire",
@@ -56,7 +55,7 @@ events = [
         "rawReading": 312.5,
         "dismissedByUser": False,
         "falseAlarm": False,
-        # endedAt omitted — active
+        "endedAt": ts(8),
     },
     # --- Fire: past, dismissed ---
     {
@@ -69,15 +68,16 @@ events = [
         "dismissedByUser": True,
         "falseAlarm": False,
     },
-    # --- Gas leak: active — pairs with node_3's live "alert" cache reading ---
+    # --- Gas leak: active ---
     {
         "hid": HID,
         "type": "gasLeak",
         "startedAt": ts(5),
         "nodeId": NODE_IDS[2],
-        "rawReading": 612.0,
+        "rawReading": 540.2,
         "dismissedByUser": False,
         "falseAlarm": False,
+        "endedAt": ts(2),
     },
     # --- Gas leak: past, dismissed, false alarm ---
     {

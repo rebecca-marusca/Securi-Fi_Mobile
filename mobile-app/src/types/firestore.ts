@@ -29,17 +29,29 @@ export type Node = {
   warnings: NodeWarnings;
 };
 
-export type CacheReading = {
-  probability: number;
+export type CacheNodeReading = {
+  nodeId?: string;
   state: string;
-  sensors: NodeSensors;
   rawMq2Reading: number;
   movementPct: number;
+  isAlarm: boolean;
+  sensors: NodeSensors;
+};
+
+export type CacheEntry = {
+  timestamp: string;
+  warningType?: string | null;
+  isAlarm: boolean;
+  packageMovementPct: number;
+  nodes: CacheNodeReading[];
 };
 
 export type Cache = {
-  overallReading: number;
-  nodeReadings: Record<string, CacheReading>;
+  packages?: CacheEntry[];
+  alarmCount: number;
+  idleStreak: number;
+  isAlarm: boolean;
+  nodeReadings: Record<string, CacheNodeReading>;
   updatedAt: Timestamp;
 };
 
