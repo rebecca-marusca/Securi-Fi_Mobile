@@ -1,8 +1,10 @@
-import { forwardRef, useCallback, useMemo } from 'react';
+import { forwardRef, useCallback, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import BottomSheet, { BottomSheetBackdrop, BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet';
 import { colors } from '@/theme/colors';
 import { LinearGradient } from "expo-linear-gradient";
+import { FinalToggleRow } from "@/components/ToggleRow";
+import { ArmedNode, armedNodes } from '@/services/userProfile';
 
 export interface SelectedNodeData {
   id: string;
@@ -19,6 +21,9 @@ interface NodeControlSheetProps {
 export const NodeControlSheet = forwardRef<BottomSheetModal, NodeControlSheetProps>(
   ({ selectedNode, onRestart, onShutdown }, ref) => {
     const snapPoints = useMemo(() => ['35%'], []);
+    const [prefs, setPrefs] = useState<ArmedNode>(
+      armedNodes
+    );
 
     const renderBackdrop = useCallback(
       (props: any) => (
@@ -41,6 +46,10 @@ export const NodeControlSheet = forwardRef<BottomSheetModal, NodeControlSheetPro
     const handleShutdown = () => {
       if (selectedNode) onShutdown?.(selectedNode.id);
     };
+    const handleToggle = async (key: keyof ArmedNode, value: boolean) => {
+      const updated = { ...prefs, [key]: value };
+      setPrefs(updated);
+    }
 
     return (
       <BottomSheetModal
@@ -65,13 +74,18 @@ export const NodeControlSheet = forwardRef<BottomSheetModal, NodeControlSheetPro
                 colors={["rgba(5, 33, 2, 0.15)", "transparent"]}
                 style={styles.innerShadowGradient}
               />
-              <Text style={styles.statusText}>
+              <FinalToggleRow
+                label={prefs.armed ? "All Armed" : "All Disarmed"}
+                value={prefs.armed}
+                onValueChange={(v) => handleToggle("armed", v)}
+              />
+              {/* <Text style={styles.statusText}>
                 <LinearGradient
                   colors={["rgba(5, 33, 2, 0.25)", "transparent"]}
                   style={styles.innerShadowGradient}
                 />
                 {selectedNode.isArmed ? 'ARMED' : 'DISARMED'}
-              </Text>
+              </Text> */}
             </View>
           </View>
 
