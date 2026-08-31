@@ -147,7 +147,7 @@ const HomeScreen: React.FC = () => {
         </View>
 
         <FinalToggleRow
-          label={optimisticArmed ? "Armed" : "Disarmed"}
+          label={optimisticArmed ? "All Armed" : "All Disarmed"}
           value={optimisticArmed}
           onValueChange={handleToggle}
           disabled={!hid || isLoading}

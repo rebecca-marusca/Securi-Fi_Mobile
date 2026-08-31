@@ -1,10 +1,11 @@
-import { forwardRef, useCallback, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { forwardRef, useCallback, useMemo, useState, useEffect } from 'react';
+import { View, Text, StyleSheet, Pressable, Alert } from 'react-native';
 import BottomSheet, { BottomSheetBackdrop, BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet';
 import { colors } from '@/theme/colors';
 import { LinearGradient } from "expo-linear-gradient";
 import { FinalToggleRow } from "@/components/ToggleRow";
-import { ArmedNode, armedNodes } from '@/services/userProfile';
+import { type FirestoreNode, subscribeToNodesForHome, armNode, disarmNode } from "@/services/nodes";
+import { useHome } from "@/hooks/useHome";
 
 export interface SelectedNodeData {
   id: string;
@@ -21,9 +22,9 @@ interface NodeControlSheetProps {
 export const NodeControlSheet = forwardRef<BottomSheetModal, NodeControlSheetProps>(
   ({ selectedNode, onRestart, onShutdown }, ref) => {
     const snapPoints = useMemo(() => ['35%'], []);
-    const [prefs, setPrefs] = useState<ArmedNode>(
-      armedNodes
-    );
+    const { home, hid, isLoading } = useHome();
+    const [dbNodes, setDbNodes] = useState<FirestoreNode[]>([]);
+    const [optimisticArmed, setOptimisticArmed] = useState(false);
 
     const renderBackdrop = useCallback(
       (props: any) => (
@@ -37,6 +38,22 @@ export const NodeControlSheet = forwardRef<BottomSheetModal, NodeControlSheetPro
       []
     );
 
+    // Subscribe to all nodes for this home to get real-time updates
+    useEffect(() => {
+      if (!hid) return;
+      const unsub = subscribeToNodesForHome(hid, setDbNodes);
+      return unsub;
+    }, [hid]);
+
+    // Derive the armed state for THIS SPECIFIC node from Firestore
+    const currentNode = dbNodes.find((n) => n.id === selectedNode?.id);
+    const derivedRequestedArmed = currentNode?.requestedArmed ?? false;
+
+    // Reconcile optimisticArmed with the real Firestore value
+    useEffect(() => {
+      setOptimisticArmed(derivedRequestedArmed);
+    }, [derivedRequestedArmed]);
+
     if (!selectedNode) return null;
 
     const handleRestart = () => {
@@ -46,11 +63,31 @@ export const NodeControlSheet = forwardRef<BottomSheetModal, NodeControlSheetPro
     const handleShutdown = () => {
       if (selectedNode) onShutdown?.(selectedNode.id);
     };
-    const handleToggle = async (key: keyof ArmedNode, value: boolean) => {
-      const updated = { ...prefs, [key]: value };
-      setPrefs(updated);
-    }
 
+    /**
+     * Same pattern as home.tsx toggle:
+     * 1. Show change immediately (optimisticArmed)
+     * 2. Send request to server (armNode/disarmNode)
+     * 3. Firestore listener updates dbNodes → derivedRequestedArmed → reconciles optimisticArmed
+     * 4. Roll back on failure
+     */
+    const handleToggle = async (value: boolean) => {
+      if (!hid || !selectedNode) return;
+      setOptimisticArmed(value); // Optimistic update: show change immediately
+      try {
+        if (value) {
+          await armNode(hid, selectedNode.id); // Arm this specific node
+        } else {
+          await disarmNode(hid, selectedNode.id); // Disarm this specific node
+        }
+        // No further action needed — subscribeToNodesForHome listener
+        // will receive the updated node and reconcile optimisticArmed
+      } catch (err) {
+        console.error('Failed to toggle node armed state:', err);
+        setOptimisticArmed(!value); // Roll back on failure
+        Alert.alert('Error', 'Could not update the node state. Please try again.');
+      }
+    };
     return (
       <BottomSheetModal
         ref={ref}
@@ -64,22 +101,19 @@ export const NodeControlSheet = forwardRef<BottomSheetModal, NodeControlSheetPro
           {/* Node Information */}
           <View style={styles.header}>
             <Text style={styles.nodeName}>{selectedNode.name}</Text>
-            <View
-              style={[
-                styles.statusBadge,
-                selectedNode.isArmed ? styles.statusArmed : styles.statusDisarmed,
-              ]}
-            >
+            <View>
+              
+              <FinalToggleRow
+                label={optimisticArmed ? "Armed" : "Disarmed"}
+                value={optimisticArmed}
+                onValueChange={handleToggle}
+                disabled={!hid || isLoading}
+              />
+              {/*
               <LinearGradient
                 colors={["rgba(5, 33, 2, 0.15)", "transparent"]}
                 style={styles.innerShadowGradient}
-              />
-              <FinalToggleRow
-                label={prefs.armed ? "All Armed" : "All Disarmed"}
-                value={prefs.armed}
-                onValueChange={(v) => handleToggle("armed", v)}
-              />
-              {/* <Text style={styles.statusText}>
+              /> <Text style={styles.statusText}>
                 <LinearGradient
                   colors={["rgba(5, 33, 2, 0.25)", "transparent"]}
                   style={styles.innerShadowGradient}
