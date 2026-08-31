@@ -1,5 +1,6 @@
 export const colors = {
   white: '#ffffff',
+  black: '#000000',
   base: '#E7EFEA',
   bgSecondary1: '#DDE7DF',
   bgSecondary2: '#CDD9D5',
@@ -12,8 +13,9 @@ export const colors = {
   redWave3: "#fc6161",
   redWave2: "#ea4444",
   redWave1: "#e20909", // movement detected
-  slightMovement: "#f8b04b", // slight movement
-  noMovement:  'rgb(64, 144, 79)'
+  slightMovement: "#f8b04b",
+  noMovement:  'rgb(64, 144, 79)',
+  intermediate: "#707070"
 };
 
 export type ColorToken = keyof typeof colors;
