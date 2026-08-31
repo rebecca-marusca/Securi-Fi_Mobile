@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { StyleSheet, Text, View, Alert } from 'react-native';
-import AnimatedWaveHeader from '../../components/AnimatedWaveHeader';
+import AnimatedWaveHeader from '@/components/AnimatedWaveHeader';
 import { colors } from "@/theme/colors";
-import RoomNodeGraph from '@/components/RoomNodeGraph';
+import RoomNodeMapNormal from '@/components/homepage-map/RoomNodeMap';
 import { LinearGradient } from "expo-linear-gradient";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { FinalToggleRow } from "@/components/ToggleRow";
@@ -128,12 +128,11 @@ const HomeScreen: React.FC = () => {
           <Text style={styles.subtitle}>{greeting}, {profile?.displayName}! </Text>
         </View>
 
-        <RoomNodeGraph
-          nodes={formattedNodes.length > 0 ? formattedNodes : undefined}
+        <RoomNodeMapNormal
           initialNodes={[
-            { id: 'kitchen', name: 'kitchen', x: 0.28, y: 0.45 },
-            { id: 'living-room', name: 'living room', x: 0.72, y: 0.28 },
-            { id: 'bedroom', name: 'bedroom', x: 0.58, y: 0.75 },
+            { id: 'kitchen', name: 'Kitchen', x: 0.28, y: 0.45, color: colors.slightMovement},
+            { id: 'living-room', name: 'Living room', x: 0.72, y: 0.28, color: colors.slightMovement},
+            { id: 'bedroom', name: 'Bedroom', x: 0.58, y: 0.75 },
           ]}
         />
 
@@ -175,7 +174,7 @@ const styles = StyleSheet.create({
   },
   cardPlaceholderText: { color: colors.accent, fontFamily: "SF-Pro-Text-Semibold" },
   statusPill: {
-    backgroundColor: 'rgb(64, 144, 79)',
+    backgroundColor:colors.noMovement,
     paddingVertical: 10,
     paddingHorizontal: 24,
     borderRadius: 12,

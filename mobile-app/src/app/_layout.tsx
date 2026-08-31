@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { useRouter, Slot, useSegments } from "expo-router";
 import { useFonts } from "expo-font";
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 
 function RootLayoutNav() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
@@ -55,11 +56,13 @@ function RootLayoutNav() {
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <AuthProvider>
-        <AlertProvider>
-          <RootLayoutNav />
-        </AlertProvider>
-      </AuthProvider>
+      <BottomSheetModalProvider>
+        <AuthProvider>
+          <AlertProvider>
+            <RootLayoutNav />
+          </AlertProvider>
+        </AuthProvider>
+      </BottomSheetModalProvider>
     </GestureHandlerRootView>
   );
 }

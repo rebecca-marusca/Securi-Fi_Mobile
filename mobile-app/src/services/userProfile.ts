@@ -33,13 +33,10 @@ export type RoomNode = {
   name: string;
   x: number;
   y: number;
+  color?: string; // Optional color property for backend support
 }
 
-export const DEFAULT_NODES: RoomNode[] = [
-  { id: 'kitchen', name: 'kitchen', x: 0.75, y: 0.35 },
-  { id: 'living-room', name: 'living room', x: 0.25, y: 0.35 },
-  { id: 'bedroom', name: 'bedroom', x: 0.25, y: 0.75 },
-];
+export const DEFAULT_NODES: RoomNode[] = [];
 
 export type UserProfile = {
   email: string;
