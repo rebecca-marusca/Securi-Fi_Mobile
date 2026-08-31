@@ -2,8 +2,6 @@ import type { Timestamp } from "@react-native-firebase/firestore";
 
 export type Home = {
   masterMac: string;
-  armed: boolean;
-  requestedArmed: boolean;
   activeEventId: string | null;
   lastSeen: Timestamp;
   registeredAt: Timestamp;
@@ -15,25 +13,45 @@ export type NodeWarnings = {
   signalWeak: boolean;
 };
 
+export type NodeSensors = {
+  flame: boolean;
+  gas: boolean;
+  batteryPct: number | null;
+};
+
 export type Node = {
   hid: string;
   nodeId: string;
   nickname: string;
   role: "master" | "slave";
+  armed: boolean;
+  requestedArmed: boolean;
   warnings: NodeWarnings;
 };
 
-export type CacheReading = {
-  probability: number;
+export type CacheNodeReading = {
+  nodeId?: string;
   state: string;
-  sensors: { flame: boolean; gas: boolean };
   rawMq2Reading: number;
   movementPct: number;
+  isAlarm: boolean;
+  sensors: NodeSensors;
+};
+
+export type CacheEntry = {
+  timestamp: string;
+  warningType?: string | null;
+  isAlarm: boolean;
+  packageMovementPct: number;
+  nodes: CacheNodeReading[];
 };
 
 export type Cache = {
-  overallReading: number;
-  nodeReadings: Record<string, CacheReading>;
+  packages?: CacheEntry[];
+  alarmCount: number;
+  idleStreak: number;
+  isAlarm: boolean;
+  nodeReadings: Record<string, CacheNodeReading>;
   updatedAt: Timestamp;
 };
 
@@ -55,8 +73,6 @@ type BaseEvent = {
 type IntrusionEvent = BaseEvent & {
   type: 'intrusion';
   endedAt?: Timestamp;
-  peakProbability: number;
-  avgProbability: number;
 };
 
 type HazardEvent = BaseEvent & {

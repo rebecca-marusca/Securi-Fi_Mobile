@@ -35,7 +35,7 @@ class RenameNodeRequest(BaseModel):
         if len(v) > 20:
             raise ValueError("nickname must be 20 characters or fewer")
         return v
-    
+
 class DismissEventRequest(BaseModel):
     false_alarm: Optional[str] = None
     
@@ -53,12 +53,37 @@ class EventDoc(BaseModel):
     type: EventType
     started_at: datetime = Field(alias="startedAt")
     ended_at: Optional[datetime] = Field(None, alias="endedAt")
-    peak_probability: Optional[float] = Field(None, alias="peakProbability")
-    avg_probability: Optional[float] = Field(None, alias="avgProbability")
     dismissed_by_user: Optional[bool] = Field(None, alias="dismissedByUser")
-    false_alarm: Optional[bool] = Field(None, alias="falseAlarm")
+    false_alarm: Optional[str] = Field(None, alias="falseAlarm")
     node_id: Optional[str] = Field(None, alias="nodeId")
     node_action: Optional[str] = Field(None, alias="nodeAction")
 
     model_config = ConfigDict(populate_by_name=True)
-    
+
+
+class NodeWarningsResponse(BaseModel):
+    low_battery: bool = Field(alias="lowBattery")
+    not_transmitting: bool = Field(alias="notTransmitting")
+    signal_weak: bool = Field(alias="signalWeak")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class NodeResponse(BaseModel):
+    """Shape returned by GET /nodes/{hid} for each node."""
+    hid: str
+    node_id: str = Field(alias="nodeId")
+    nickname: str
+    role: str
+    armed: bool = False
+    requested_armed: bool = Field(default=False, alias="requestedArmed")
+    warnings: Optional[NodeWarningsResponse] = None
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class ArmNodeResponse(BaseModel):
+    """Shape returned by POST /nodes/{hid}/{node_id}/arm|disarm."""
+    hid: str
+    node_id: str
+    requested_armed: bool

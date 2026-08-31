@@ -34,10 +34,10 @@ export default function ProfileScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <AnimatedWaveHeader 
-        color1 = { colors.greenWave1}
-        color2 = { colors.greenWave2}
-        color3 = { colors.greenWave3}
+      <AnimatedWaveHeader
+        color1= { colors.greenWave1 }
+        color2= { colors.greenWave2 }
+        color3= { colors.greenWave3 }
       />
       <Image
         source={

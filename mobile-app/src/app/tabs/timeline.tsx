@@ -95,27 +95,23 @@ function mapEventToTimelineEntry(
   if (event.type === "intrusion") {
     const nodeName = event.nodeId ? getNodeDisplayName(event.nodeId, nodeNameMap) : null;
     const locationText = nodeName ? ` near ${nodeName}` : "";
-    const prob = event.peakProbability ?? 0;
 
-    if (prob >= 0.7) {
-      return {
-        id: event.eid,
-        type: "break_in",
-        date,
-        title: "BREAK-IN DETECTED",
-        description:
-          event.avgProbability !== undefined
-            ? `Peak probability: ${(prob * 100).toFixed(0)}%${locationText}. Average probability: ${(event.avgProbability * 100).toFixed(0)}%.`
-            : `Break-in detected${locationText} with ${(prob * 100).toFixed(0)}% probability.`,
-      };
-    }
+    // if (prob >= 0.7) {
+    //   return {
+    //     id: event.eid,
+    //     type: "break_in",
+    //     date,
+    //     title: "BREAK-IN DETECTED",
+    //     description: 'in production...'
+    //   };
+    // }
 
     return {
       id: event.eid,
       type: "small_movement",
       date,
       title: "SLIGHT MOVEMENT",
-      description: `Slight movement detected${locationText} (peak probability: ${(prob * 100).toFixed(0)}%).`,
+      description: `Slight movement detected`,
     };
   }
 
@@ -182,7 +178,7 @@ export default function TimelineScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         <AnimatedWaveHeader 
           color1={colors.greenWave1}
           color2={colors.greenWave2}
@@ -219,11 +215,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.base,
-    alignItems: "center"
+  },
+  scrollView: {
+    flex: 1,
+    width: "100%",
   },
   scrollContent: {
     paddingTop: 150,
-    paddingBottom: 121 /// trust am facut niste matematica foarte smart ca sa ajung la 121 deci pls dont change
+    paddingBottom: 121, /// trust am facut niste matematica foarte smart ca sa ajung la 121 deci pls dont change
   },
   endText: {
     paddingTop: 16,
@@ -234,5 +233,6 @@ const styles = StyleSheet.create({
   },
   loader: {
     marginTop: 40,
+    alignSelf: "center",
   },
 });

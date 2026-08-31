@@ -1,31 +1,15 @@
 """
 seed_events.py — pushes fake intrusion / fire / gasLeak / nodeStatus events
-into Firestore for frontend testing.
+into Firestore, matching the frontend SecuriFiEvent union (types/firestore.ts).
 
 Usage:
     pip install firebase-admin --break-system-packages
     python seed_events.py
-
-Fill in HID and NODE_IDS below before running — this does NOT create a
-matching home doc, so point it at a home that already exists (or your
-dev home) or the app's home-scoped listeners won't have anything to
-attach the events to.
 """
 
 from datetime import datetime, timedelta, timezone
 
-import firebase_admin
-from firebase_admin import credentials, firestore
-
-# ---- CONFIG — fill these in ----
-SERVICE_ACCOUNT_PATH = "serviceAccountKey.json"  # path to your backend's key
-HID = "53dea655-eedb-4ef1-a261-efc7a7ff43db"
-NODE_IDS = ["node_rebecca1", "node_rebecca2", "node_rebecca3"]  # replace with real node ids if you have them
-# ---------------------------------
-
-cred = credentials.Certificate(SERVICE_ACCOUNT_PATH)
-firebase_admin.initialize_app(cred)
-db = firestore.client()
+from seed_config import db, HID, NODE_IDS
 
 now = datetime.now(timezone.utc)
 
@@ -40,21 +24,17 @@ events = [
         "hid": HID,
         "type": "intrusion",
         "startedAt": ts(2),
-        "peakProbability": 0.91,
-        "avgProbability": 0.78,
         "dismissedByUser": False,
         "falseAlarm": False,
-        # endedAt intentionally omitted — represents "still active"
+        "endedAt": ts(1)
     },
-    # --- Intrusion: past, dismissed, real ---
+    # --- Intrusion
     {
         "hid": HID,
         "type": "intrusion",
         "startedAt": ts(180),
         "endedAt": ts(175),
-        "peakProbability": 0.85,
-        "avgProbability": 0.6,
-        "dismissedByUser": True,
+        "dismissedByUser": False,
         "falseAlarm": False,
     },
     # --- Intrusion: past, dismissed, flagged as false alarm ---
@@ -63,8 +43,6 @@ events = [
         "type": "intrusion",
         "startedAt": ts(60 * 24),  # 1 day ago
         "endedAt": ts(60 * 24 - 5),
-        "peakProbability": 0.42,
-        "avgProbability": 0.3,
         "dismissedByUser": True,
         "falseAlarm": True,
     },
@@ -77,7 +55,7 @@ events = [
         "rawReading": 312.5,
         "dismissedByUser": False,
         "falseAlarm": False,
-        # endedAt omitted — active
+        "endedAt": ts(8),
     },
     # --- Fire: past, dismissed ---
     {
@@ -99,6 +77,7 @@ events = [
         "rawReading": 540.2,
         "dismissedByUser": False,
         "falseAlarm": False,
+        "endedAt": ts(2),
     },
     # --- Gas leak: past, dismissed, false alarm ---
     {

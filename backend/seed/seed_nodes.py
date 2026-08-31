@@ -1,28 +1,12 @@
 """
-seed_nodes.py — pushes fake node docs into Firestore (nodes/{hid}_{nodeId})
-so the app has something to render before real hardware is connected.
+seed_nodes.py — pushes fake node docs into Firestore (nodes/{hid}_{nodeId}).
 
 Usage:
     pip install firebase-admin --break-system-packages
     python seed_nodes.py
-
-Uses the SAME HID and NODE_IDS as seed_events.py — keep these in sync so
-the fire/gasLeak/nodeStatus events you already seeded reference nodes
-that actually exist.
 """
 
-import firebase_admin
-from firebase_admin import credentials, firestore
-
-# ---- CONFIG — fill these in (match seed_events.py) ----
-SERVICE_ACCOUNT_PATH = "serviceAccountKey.json"
-HID = "53dea655-eedb-4ef1-a261-efc7a7ff43db"
-NODE_IDS = ["node_rebecca1", "node_rebecca2", "node_rebecca3"] 
-# ---------------------------------------------------------
-
-cred = credentials.Certificate(SERVICE_ACCOUNT_PATH)
-firebase_admin.initialize_app(cred)
-db = firestore.client()
+from seed_config import db, HID, NODE_IDS
 
 nodes = [
     {
@@ -35,6 +19,8 @@ nodes = [
             "notTransmitting": False,
             "signalWeak": False,
         },
+        "armed": True,
+        "requestedArmed": True,   # in sync — settled "armed" state
     },
     {
         "nodeId": NODE_IDS[1],
@@ -42,10 +28,12 @@ nodes = [
         "nickname": "Front Door",
         "role": "slave",
         "warnings": {
-            "lowBattery": False,
+            "lowBattery": True,   # exercise the low-battery warning UI
             "notTransmitting": False,
             "signalWeak": False,
         },
+        "armed": False,
+        "requestedArmed": True,  # mismatch — exercises "Arming…" UI state
     },
     {
         "nodeId": NODE_IDS[2],
@@ -55,8 +43,10 @@ nodes = [
         "warnings": {
             "lowBattery": False,
             "notTransmitting": False,
-            "signalWeak": False,
+            "signalWeak": True,   # exercise the weak-signal warning UI
         },
+        "armed": False,
+        "requestedArmed": False,  # in sync — settled "disarmed" state
     },
 ]
 

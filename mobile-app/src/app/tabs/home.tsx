@@ -8,7 +8,7 @@ import { useUserProfile } from "@/hooks/useUserProfile";
 import { FinalToggleRow } from "@/components/ToggleRow";
 import { useHome } from "@/hooks/useHome";
 import { armHome, disarmHome } from "@/services/homes";
-import { subscribeToNodesForHome } from "@/services/nodes";
+import { subscribeToNodesForHome, type FirestoreNode } from "@/services/nodes";
 import { RoomNode } from '@/services/userProfile';
 
 function getGreeting(): string {
@@ -19,20 +19,44 @@ function getGreeting(): string {
   return "Good evening";
 }
 
-function getStatusText(home: ReturnType<typeof useHome>['home']): string {
+/**
+ * Derives a human-readable status line from the live node list.
+ * - If no nodes: "No device connected"
+ * - If there is an active event: "Alert active"
+ * - If all nodes' requestedArmed === armed (stable): "Armed" / "Disarmed"
+ * - Otherwise (pending confirmation): "Arming…" / "Disarming…"
+ */
+function getStatusText(
+  home: ReturnType<typeof useHome>['home'],
+  nodes: FirestoreNode[]
+): string {
   if (!home) return "No device connected";
   if (home.activeEventId) return "Alert active";
-  if (home.requestedArmed !== home.armed) return home.requestedArmed ? "Arming…" : "Disarming…";
-  return home.armed ? "No movement detected" : "System disarmed";
+
+  if (nodes.length === 0) return "No device connected";
+
+  const allArmed = nodes.every((n) => n.armed);
+  const allRequestedArmed = nodes.every((n) => n.requestedArmed);
+  const noneRequestedArmed = nodes.every((n) => !n.requestedArmed);
+
+  // Stable armed state
+  if (allArmed && allRequestedArmed) return "No movement detected";
+  if (!allArmed && noneRequestedArmed) return "System disarmed";
+
+  // Transitional state (waiting for hardware confirmation)
+  if (allRequestedArmed) return "Arming…";
+  if (noneRequestedArmed) return "Disarming…";
+
+  return "Partially armed";
 }
 
 const HomeScreen: React.FC = () => {
   const { profile } = useUserProfile();
   const { home, hid, isLoading } = useHome();
   const [greeting, setGreeting] = useState(getGreeting());
-  const [dbNodes, setDbNodes] = useState<any[]>([]);
+  const [dbNodes, setDbNodes] = useState<FirestoreNode[]>([]);
 
-  // Subscribe to home's nodes from database for real-time nickname updates
+  // Subscribe to home's nodes from database for real-time nickname + armed updates
   useEffect(() => {
     if (!hid) return;
     const unsub = subscribeToNodesForHome(hid, setDbNodes);
@@ -48,20 +72,23 @@ const HomeScreen: React.FC = () => {
     ];
     return dbNodes.map((node, index) => ({
       id: node.nodeId || node.id || `node-${index}`,
-      name: node.nickname || node.name || `Node ${index + 1}`,
+      name: node.nickname || `Node ${index + 1}`,
       x: defaultPositions[index % defaultPositions.length].x,
       y: defaultPositions[index % defaultPositions.length].y,
     }));
   }, [dbNodes]);
 
-  // Optimistic local toggle state, same pattern as the Notifications screen —
-  // reflects the user's tap instantly, then reconciles with `home.requestedArmed`
-  // once the Firestore listener catches up. Rolls back on a failed request.
+  // Derive the optimistic armed state from nodes: all nodes requestedArmed → true.
+  // Falls back to false when there are no nodes yet.
+  const derivedRequestedArmed = dbNodes.length > 0 && dbNodes.every((n) => n.requestedArmed);
+
+  // Optimistic local toggle state — reflects tap immediately, reconciles with
+  // Firestore listener once nodes update. Rolls back on request failure.
   const [optimisticArmed, setOptimisticArmed] = useState(false);
 
   useEffect(() => {
-    if (home) setOptimisticArmed(home.requestedArmed);
-  }, [home?.requestedArmed]);
+    setOptimisticArmed(derivedRequestedArmed);
+  }, [derivedRequestedArmed]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -79,7 +106,7 @@ const HomeScreen: React.FC = () => {
       } else {
         await disarmHome(hid);
       }
-      // No further local update needed — subscribeToHome's listener
+      // No further local update needed — subscribeToNodesForHome listener
       // will push the real requestedArmed value once Firestore updates.
     } catch (err) {
       console.error('Failed to toggle armed state:', err);
@@ -87,6 +114,7 @@ const HomeScreen: React.FC = () => {
       Alert.alert('Error', 'Could not update the system state. Please try again.');
     }
   };
+
 
   return (
     <View style={styles.container}>
@@ -115,7 +143,7 @@ const HomeScreen: React.FC = () => {
             style={styles.innerShadowGradient}
           />
           <Text style={styles.statusText}>
-            {isLoading ? "Loading…" : getStatusText(home)}
+            {isLoading ? "Loading…" : getStatusText(home, dbNodes)}
           </Text>
         </View>
 
