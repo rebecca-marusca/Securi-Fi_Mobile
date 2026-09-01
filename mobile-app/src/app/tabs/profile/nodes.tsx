@@ -1,7 +1,12 @@
+
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { useAuth } from "@/contexts/AuthContext";
 import { subscribeToUserHomeLinks } from "@/services/homes";
-import { renameNode, subscribeToNodesForHome, type FirestoreNode } from "@/services/nodes";
+import {
+  renameNode,
+  subscribeToNodesForHome,
+  type FirestoreNode,
+} from "@/services/nodes";
 import { colors } from "@/theme/colors";
 import { SymbolView } from "expo-symbols";
 import { useEffect, useState } from "react";
@@ -14,9 +19,15 @@ import {
   View,
 } from "react-native";
 
-function ArmedBadge({ armed, requestedArmed }: { armed: boolean; requestedArmed: boolean }) {
+function ArmedBadge({
+  armed,
+  requestedArmed,
+}: {
+  armed: boolean;
+  requestedArmed: boolean;
+}) {
   const isPending = armed !== requestedArmed;
-  
+
   let label: string;
   let bg: string;
 
@@ -36,17 +47,23 @@ function ArmedBadge({ armed, requestedArmed }: { armed: boolean; requestedArmed:
       <Text style={badgeStyles.text}>{label}</Text>
     </View>
   );
-
 }
 
-function WarningDots({ warnings }: { warnings: FirestoreNode["warnings"] | undefined }) {
+function WarningDots({
+  warnings,
+}: {
+  warnings: FirestoreNode["warnings"] | undefined;
+}) {
   if (!warnings) return null;
+
   const active = [
     warnings.lowBattery && "Low battery",
     warnings.notTransmitting && "Not transmitting",
     warnings.signalWeak && "Weak signal",
   ].filter(Boolean) as string[];
+
   if (active.length === 0) return null;
+
   return (
     <View style={badgeStyles.warningRow}>
       {active.map((w) => (
@@ -65,9 +82,11 @@ export default function NodesScreen() {
 
   useEffect(() => {
     if (!user) return;
+
     const unsubscribe = subscribeToUserHomeLinks(user.uid, (links) => {
       setHid(links[0]?.hid ?? null);
     });
+
     return unsubscribe;
   }, [user]);
 
@@ -76,12 +95,14 @@ export default function NodesScreen() {
       setNodes([]);
       return;
     }
+
     const unsubscribe = subscribeToNodesForHome(hid, setNodes);
     return unsubscribe;
   }, [hid]);
 
   const handleRename = (node: FirestoreNode) => {
     const nodeHid = node.hid;
+
     Alert.prompt(
       "Rename node",
       undefined,
@@ -100,26 +121,45 @@ export default function NodesScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+    >
       <ScreenHeader title="Configure nodes" />
 
       <View style={styles.card}>
         {nodes.map((node, index) => (
           <View
             key={node.nodeId || node.id || index}
-            style={[styles.row, index === nodes.length - 1 && styles.lastRow]}
+            style={[
+              styles.row,
+              index === nodes.length - 1 && styles.lastRow,
+            ]}
           >
             <View style={styles.nodeInfo}>
               <View style={styles.nameRow}>
                 <Text style={styles.nodeName}>{node.nickname}</Text>
                 <Text style={styles.roleTag}>{node.role}</Text>
               </View>
+
               <WarningDots warnings={node.warnings} />
             </View>
+
             <View style={styles.rightCol}>
-              <ArmedBadge armed={node.armed} requestedArmed={node.requestedArmed} />
-              <TouchableOpacity onPress={() => handleRename(node)} style={styles.renameBtn}>
-                <SymbolView name="pencil.line" size={20} tintColor={colors.accent} />
+              <ArmedBadge
+                armed={node.armed}
+                requestedArmed={node.requestedArmed}
+              />
+
+              <TouchableOpacity
+                onPress={() => handleRename(node)}
+                style={styles.renameBtn}
+              >
+                <SymbolView
+                  name="pencil.line"
+                  size={22}
+                  tintColor={colors.accent}
+                />
               </TouchableOpacity>
             </View>
           </View>
@@ -135,50 +175,57 @@ export default function NodesScreen() {
 
 const badgeStyles = StyleSheet.create({
   badge: {
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    borderRadius: 9,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
   },
   text: {
     fontFamily: "SF-Pro-Text-Semibold",
-    fontSize: 11,
+    fontSize: 12,
     color: colors.base,
   },
   warningRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 4,
-    marginTop: 4,
+    gap: 5,
+    marginTop: 5,
   },
   warningBadge: {
     backgroundColor: "#FFC107",
-    borderRadius: 6,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    borderRadius: 7,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
   },
   warningText: {
     fontFamily: "SF-Pro-Text-Regular",
-    fontSize: 10,
+    fontSize: 11,
     color: "#333",
   },
 });
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.base, paddingTop: 60 },
-  content: { paddingHorizontal: 24, paddingBottom: 40 },
+  container: {
+    flex: 1,
+    backgroundColor: colors.base,
+    paddingTop: 60,
+  },
+  content: {
+    paddingHorizontal: 24,
+    paddingBottom: 40,
+  },
   card: {
     marginTop: 24,
     backgroundColor: colors.bgSecondary1,
     borderColor: colors.bgSecondary2,
     borderWidth: 1,
-    borderRadius: 16,
-    paddingHorizontal: 16,
+    borderRadius: 17,
+    paddingHorizontal: 18,
   },
   row: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 16,
+    paddingVertical: 18,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.text,
   },
@@ -187,46 +234,46 @@ const styles = StyleSheet.create({
   },
   nodeInfo: {
     flex: 1,
-    marginRight: 12,
+    marginRight: 13,
   },
   nameRow: {
     flexDirection: "row",
     alignItems: "baseline",
-    gap: 8,
+    gap: 9,
   },
   nodeName: {
     fontFamily: "SF-Pro-Text-Regular",
-    fontSize: 16,
+    fontSize: 17,
     color: colors.text,
   },
   roleTag: {
     fontFamily: "SF-Pro-Text-Regular",
-    fontSize: 11,
+    fontSize: 12,
     color: colors.textMuted,
   },
   rightCol: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: 13,
   },
   renameBtn: {
-    padding: 4,
+    padding: 5,
   },
   addButton: {
     backgroundColor: colors.accent,
     borderRadius: 999,
-    paddingVertical: 16,
+    paddingVertical: 17,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 30,
-    width: 120,
+    marginTop: 33,
+    width: 132,
     alignSelf: "center",
-    minHeight: 48,
+    minHeight: 52,
   },
   addButtonText: {
     color: colors.base,
     fontFamily: "SF-Pro-Text-Semibold",
-    fontSize: 16,
+    fontSize: 17,
   },
 });
 

@@ -70,7 +70,7 @@ const HomeScreen: React.FC = () => {
       { x: 0.72, y: 0.28 },
       { x: 0.58, y: 0.75 },
     ];
-    const defaultColors = [colors.slightMovement, colors.slightMovement, colors.accent];
+    const defaultColors = [colors.accent, colors.accent, colors.accent];
     return dbNodes.map((node, index) => ({
       id: node.nodeId || node.id || `node-${index}`,
       name: node.nickname || `Node ${index + 1}`,

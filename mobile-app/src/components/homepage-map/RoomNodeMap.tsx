@@ -217,7 +217,7 @@ export const RoomNodeMapEmergency: React.FC<Omit<RoomNodeMapProps, 'isEmergency'
 const styles = StyleSheet.create({
   card: {
     width: '100%',
-    backgroundColor: colors.bgSecondary2,
+    backgroundColor: colors.bgSecondary1,
     borderRadius: 20,
     borderWidth: 3,
     borderColor: colors.noMovement,
