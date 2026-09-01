@@ -389,7 +389,7 @@ const styles = StyleSheet.create({
     paddingBottom: 121,
   },
   endText: {
-    paddingTop: 30,
+    paddingTop: 20,
     fontFamily: "SF-Pro-Text-Semibold",
     fontSize: 13,
     color: colors.textMuted,

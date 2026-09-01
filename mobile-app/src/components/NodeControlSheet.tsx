@@ -46,7 +46,7 @@ export const NodeControlSheet = forwardRef<BottomSheetModal, NodeControlSheetPro
     }, [hid]);
 
     // Derive the armed state for THIS SPECIFIC node from Firestore
-    const currentNode = dbNodes.find((n) => n.id === selectedNode?.id);
+    const currentNode = dbNodes.find((n) => n.id === selectedNode?.id || n.nodeId === selectedNode?.id);
     const derivedRequestedArmed = currentNode?.requestedArmed ?? false;
 
     // Reconcile optimisticArmed with the real Firestore value
@@ -109,17 +109,6 @@ export const NodeControlSheet = forwardRef<BottomSheetModal, NodeControlSheetPro
                 onValueChange={handleToggle}
                 disabled={!hid || isLoading}
               />
-              {/*
-              <LinearGradient
-                colors={["rgba(5, 33, 2, 0.15)", "transparent"]}
-                style={styles.innerShadowGradient}
-              /> <Text style={styles.statusText}>
-                <LinearGradient
-                  colors={["rgba(5, 33, 2, 0.25)", "transparent"]}
-                  style={styles.innerShadowGradient}
-                />
-                {selectedNode.isArmed ? 'ARMED' : 'DISARMED'}
-              </Text> */}
             </View>
           </View>
 
@@ -133,11 +122,6 @@ export const NodeControlSheet = forwardRef<BottomSheetModal, NodeControlSheetPro
               ]}
               onPress={handleRestart}
             >
-              <LinearGradient
-                colors={["rgba(5, 36, 7, 0.14)", "transparent"]}
-                style={styles.innerShadowGradient}
-                pointerEvents="none"
-              />
               <Text style={styles.restartText}>Restart</Text>
             </Pressable>
 
@@ -149,11 +133,6 @@ export const NodeControlSheet = forwardRef<BottomSheetModal, NodeControlSheetPro
               ]}
               onPress={handleShutdown}
             >
-              <LinearGradient
-                colors={["rgba(33, 2, 2, 0.13)", "transparent"]}
-                style={styles.innerShadowGradient}
-                pointerEvents="none"
-              />
               <Text style={styles.shutdownText}>Shut Down</Text>
             </Pressable>
           </View>
@@ -173,19 +152,19 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: 24,
-    paddingTop:15,
+    paddingTop: 15,
     alignItems: 'center',
+    paddingBottom: 50
   },
   header: {
     alignItems: 'center',
-    marginBottom: 30,
+    marginBottom: 15,
   },
   nodeName: {
     fontSize: 22,
-    fontWeight: '700',
+    fontFamily: "SF-Pro-Text-Bold",
     color: colors.accent,
-    textDecorationLine: 'underline',
-    marginBottom: 15,
+    marginBottom: 10,
   },
   statusBadge: {
     paddingVertical: 6,
@@ -208,7 +187,7 @@ const styles = StyleSheet.create({
   actionRow: {
     flexDirection: 'row',
     gap: 12,
-    width: '100%',
+    width: '90%',
   },
   button: {
     flex: 1,
@@ -222,19 +201,20 @@ const styles = StyleSheet.create({
     opacity: 0.8,
   },
   restartButton: {
-    backgroundColor: colors.bgSecondary2,
+    backgroundColor: colors.textMuted,
   },
   shutdownButton: {
-    backgroundColor: colors.redWave3,
+    backgroundColor: colors.redWave1,
   },
   restartText: {
     fontSize: 15,
-    fontWeight: '600',
-    color: colors.accent,
+    fontFamily: "SF-Pro-Text-Bold",
+    color: colors.base,
   },
+
   shutdownText: {
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: "SF-Pro-Text-Bold",
     color: colors.base,
   },
 

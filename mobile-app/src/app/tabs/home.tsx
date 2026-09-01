@@ -80,9 +80,19 @@ const HomeScreen: React.FC = () => {
     }));
   }, [dbNodes]);
 
-  // Derive the optimistic armed state from nodes: all nodes requestedArmed → true.
-  // Falls back to false when there are no nodes yet.
-  const derivedRequestedArmed = dbNodes.length > 0 && dbNodes.every((n) => n.requestedArmed);
+  // Derive global armed states:
+  const allArmed = dbNodes.length > 0 && dbNodes.every((n) => n.requestedArmed);
+  const anyArmed = dbNodes.length > 0 && dbNodes.some((n) => n.requestedArmed);
+
+  // System toggle stays ON (true) as long as at least one node is armed.
+  // It only turns OFF (false) when ALL nodes are disarmed.
+  const derivedRequestedArmed = anyArmed;
+
+  const toggleLabel = allArmed
+    ? "All Armed"
+    : anyArmed
+    ? "Partially Armed"
+    : "All Disarmed";
 
   // Optimistic local toggle state — reflects tap immediately, reconciles with
   // Firestore listener once nodes update. Rolls back on request failure.
@@ -145,7 +155,7 @@ const HomeScreen: React.FC = () => {
         </View>
 
         <FinalToggleRow
-          label={optimisticArmed ? "All Armed" : "All Disarmed"}
+          label={toggleLabel}
           value={optimisticArmed}
           onValueChange={handleToggle}
           disabled={!hid || isLoading}
