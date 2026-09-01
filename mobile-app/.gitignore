@@ -46,3 +46,4 @@ GoogleService-Info.plist
 google-services.json
 
 .DS_Store
+**/__pycache__/
