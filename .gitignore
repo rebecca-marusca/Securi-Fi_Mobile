@@ -151,3 +151,5 @@ __pycache__/
 venv/
 backend/.venv/
 backend/venv/
+
+**/__pycache__/
