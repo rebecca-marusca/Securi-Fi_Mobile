@@ -16,7 +16,6 @@ export interface RoomNodeWithColor extends RoomNode {
 interface RoomNodeMapProps {
   initialNodes?: RoomNodeWithColor[];
   style?: StyleProp<ViewStyle>;
-  /** Disables node dragging and hides the edit toggle */
   isEmergency?: boolean;
 }
 
@@ -27,8 +26,7 @@ export const RoomNodeMap: React.FC<RoomNodeMapProps> = ({
   style,
   isEmergency = false,
 }) => {
-  // --- STATE & REFS ---
-  const [nodes, setNodes] = useState<RoomNodeWithColor[]>(initialNodes);
+  const [nodes, setNodes] = useState<RoomNodeWithColor[]>([]);
   const [editMode, setEditMode] = useState<boolean>(false);
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
   const [isLoaded, setIsLoaded] = useState<boolean>(false);
@@ -38,8 +36,11 @@ export const RoomNodeMap: React.FC<RoomNodeMapProps> = ({
 
   const activeEditMode = !isEmergency && editMode;
 
-  // --- 1. LOAD & MERGE POSITIONS ON MOUNT ---
+  // --- 1. LOAD & MERGE POSITIONS (Runs ONCE when initialNodes receives items) ---
   useEffect(() => {
+    // Wait until Firestore actually gives us nodes
+    if (initialNodes.length === 0 || isLoaded) return;
+
     async function loadSavedPositions() {
       try {
         const savedJson = await AsyncStorage.getItem(STORAGE_KEY);
@@ -69,15 +70,16 @@ export const RoomNodeMap: React.FC<RoomNodeMapProps> = ({
     }
 
     loadSavedPositions();
-  }, []);
+  }, [initialNodes, isLoaded]);
 
-  // --- 2. SYNC PROP CHANGES ---
+  // --- 2. SYNC NAME/ARMED METADATA FROM FIRESTORE ---
   useEffect(() => {
-    if (!isLoaded) return;
+    if (!isLoaded || initialNodes.length === 0) return;
 
     setNodes((prevNodes) =>
       initialNodes.map((propNode) => {
         const existingNode = prevNodes.find((n) => n.id === propNode.id);
+        // Retain local x/y position if present; update names/props from parent
         return {
           ...propNode,
           x: existingNode ? existingNode.x : propNode.x,
@@ -87,9 +89,10 @@ export const RoomNodeMap: React.FC<RoomNodeMapProps> = ({
     );
   }, [initialNodes, isLoaded]);
 
-  // --- 3. SAVE POSITIONS ON POSITION MOVE ---
+  // --- 3. SAVE POSITIONS ON MOVE ---
   useEffect(() => {
-    if (!isLoaded) return;
+    // Crucial: Only save AFTER initial storage load is done and nodes are present
+    if (!isLoaded || nodes.length === 0) return;
 
     async function savePositions() {
       try {
@@ -118,14 +121,13 @@ export const RoomNodeMap: React.FC<RoomNodeMapProps> = ({
   }, [selectedNode]);
 
   // --- HANDLERS ---
-  
   const handleCanvasLayout = (e: LayoutChangeEvent) => {
     const { width, height } = e.nativeEvent.layout;
     setCanvasSize({ width, height });
   };
 
   const toggleEditMode = () => {
-    if (isEmergency) return; // Guard clause against toggling during emergency
+    if (isEmergency) return;
     setEditMode(!editMode);
   };
 
@@ -163,11 +165,9 @@ export const RoomNodeMap: React.FC<RoomNodeMapProps> = ({
     setSelectedNode(null);
   };
 
-  // --- RENDER ---
   return (
     <>
       <View style={[styles.card, style]}>
-        {/* Render header edit toggle ONLY when NOT in emergency mode */}
         {!isEmergency && (
           <View style={styles.cardTopRow} pointerEvents="box-none">
             <Pressable
@@ -181,7 +181,6 @@ export const RoomNodeMap: React.FC<RoomNodeMapProps> = ({
           </View>
         )}
 
-        {/* Map Canvas */}
         <View style={styles.canvas} onLayout={handleCanvasLayout}>
           {canvasSize.width > 0 &&
             nodes.map((node) => (
@@ -197,7 +196,6 @@ export const RoomNodeMap: React.FC<RoomNodeMapProps> = ({
         </View>
       </View>
 
-      {/* Control Bottom Sheet Modal */}
       <NodeControlSheet
         ref={sheetRef}
         selectedNode={selectedNode}
@@ -208,14 +206,10 @@ export const RoomNodeMap: React.FC<RoomNodeMapProps> = ({
   );
 };
 
-// --- MODE-SPECIFIC EXPORTS ---
-
-/** Standard editable room node map */
 export const RoomNodeMapNormal: React.FC<Omit<RoomNodeMapProps, 'isEmergency'>> = (props) => (
   <RoomNodeMap {...props} isEmergency={false} />
 );
 
-/** Emergency room node map with drag controls removed */
 export const RoomNodeMapEmergency: React.FC<Omit<RoomNodeMapProps, 'isEmergency'>> = (props) => (
   <RoomNodeMap {...props} isEmergency={true} />
 );

@@ -70,11 +70,13 @@ const HomeScreen: React.FC = () => {
       { x: 0.72, y: 0.28 },
       { x: 0.58, y: 0.75 },
     ];
+    const defaultColors = [colors.slightMovement, colors.slightMovement, colors.accent];
     return dbNodes.map((node, index) => ({
       id: node.nodeId || node.id || `node-${index}`,
       name: node.nickname || `Node ${index + 1}`,
       x: defaultPositions[index % defaultPositions.length].x,
       y: defaultPositions[index % defaultPositions.length].y,
+      color: defaultColors[index % defaultColors.length],
     }));
   }, [dbNodes]);
 
@@ -129,11 +131,7 @@ const HomeScreen: React.FC = () => {
         </View>
 
         <RoomNodeMapNormal
-          initialNodes={[
-            { id: 'kitchen', name: 'Kitchen', x: 0.28, y: 0.45, color: colors.slightMovement},
-            { id: 'living-room', name: 'Living room', x: 0.72, y: 0.28, color: colors.slightMovement},
-            { id: 'bedroom', name: 'Bedroom', x: 0.58, y: 0.75 },
-          ]}
+          initialNodes={formattedNodes}
         />
 
         <View style={styles.statusPill}>
