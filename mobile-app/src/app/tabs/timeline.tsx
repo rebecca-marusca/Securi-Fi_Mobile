@@ -360,7 +360,7 @@ export default function TimelineScreen() {
               );
             })}
             <View>
-              <Text style={styles.endText}>You've reached the end. Phew. </Text>
+              <Text style={styles.endText}>You've reached the end! Phew. </Text>
             </View>
           </>
         ) : (

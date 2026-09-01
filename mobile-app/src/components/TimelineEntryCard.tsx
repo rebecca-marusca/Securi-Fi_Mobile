@@ -7,12 +7,12 @@ import type { TimelineEntry } from '@/types/timeline';
 const TRUNCATE_LENGTH = 100;
 
 const TITLE_COLORS: Record<TimelineEntry['type'], string> = {
-  break_in: '#B3453D',
-  fire: '#C43D2E',
-  gas_leak: '#D96827',
+  break_in: '#9c1818',
+  fire: '#EA580C',
+  gas_leak: '#D97706',
   nodes_on: colors.text,
   nodes_off: colors.text,
-  false_alarm: colors.text,
+  false_alarm: "#4b5a6e",
 };
 
 type Props = {
@@ -55,7 +55,7 @@ export function TimelineEntryCard({ entry, isLast, needsDivider, hideDate }: Pro
   return (
     <View style={styles.wrapper}>
       {!hideDate ? (
-        <View style={styles.dateTimeColumn}>
+        <View style={styles.dateTimeRow}>
           <Text style={styles.date}>{entry.date}</Text>
           {entry.startTime && (
             <Text style={styles.time}>
@@ -110,8 +110,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     marginBottom: 20,
   },
-  dateTimeColumn: {
-    flexDirection: 'column',
+  dateTimeRow: {
+    flexDirection: 'row',
+    alignItems: "baseline",
     marginBottom: 2,
   },
   date: {
@@ -123,8 +124,7 @@ const styles = StyleSheet.create({
     fontFamily: 'SF-Pro-Text-Regular',
     fontSize: 13,
     color: colors.textMuted,
-    paddingTop: 8,
-    paddingBottom: 8,
+    paddingLeft: 8,
   },
   timeOnly: {
     fontFamily: 'SF-Pro-Text-Regular',

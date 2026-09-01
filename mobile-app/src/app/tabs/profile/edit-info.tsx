@@ -1,23 +1,23 @@
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
+import { uploadProfilePhoto } from "@/services/cloudinary";
 import { updateUserProfile } from "@/services/userProfile";
 import { colors } from "@/theme/colors";
 import { getAuth, updateProfile } from "@react-native-firebase/auth";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { uploadProfilePhoto } from "@/services/cloudinary";
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 export default function EditInfoScreen() {
@@ -38,7 +38,8 @@ export default function EditInfoScreen() {
   }, [profile]);
 
   const handlePickPhoto = async () => {
-    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    const permissionResult =
+      await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (permissionResult.status !== "granted") {
       Alert.alert(
@@ -77,8 +78,8 @@ export default function EditInfoScreen() {
 
       if (selectedPhotoUri) {
         if (selectedPhotoUri !== profile?.photoURL) {
-            setIsUploadingPhoto(true);
-            nextPhotoURL = await uploadProfilePhoto(selectedPhotoUri);
+          setIsUploadingPhoto(true);
+          nextPhotoURL = await uploadProfilePhoto(selectedPhotoUri);
         }
       } else if (hasPhotoChanged) {
         nextPhotoURL = null;
@@ -112,6 +113,7 @@ export default function EditInfoScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <ScreenHeader title="Edit info" />
 
+      {/* Avatar Section */}
       <View style={styles.avatarSection}>
         <TouchableOpacity onPress={handlePickPhoto} activeOpacity={0.8}>
           <Image
@@ -131,30 +133,35 @@ export default function EditInfoScreen() {
           <TouchableOpacity
             style={styles.removePhotoButton}
             onPress={() => setSelectedPhotoUri(null)}
+            activeOpacity={0.7}
           >
             <Text style={styles.removePhotoText}>Remove photo</Text>
           </TouchableOpacity>
         ) : null}
       </View>
 
-      <Text style={styles.label}>Display name</Text>
-      <TextInput
-        style={styles.input}
-        value={displayName}
-        onChangeText={setDisplayName}
-      />
+        <View style={styles.cardGroup}>
+          <Text style={styles.inputLabel}>Display name</Text>
+          <TextInput
+            style={styles.input}
+            value={displayName}
+            onChangeText={setDisplayName}
+            placeholder="Enter display name"
+            placeholderTextColor={colors.textMuted}
+          />
+        </View>
 
+      {/* Action Button */}
       <TouchableOpacity
         style={styles.confirmButton}
         onPress={handleConfirm}
         disabled={isConfirming || isUploadingPhoto}
+        activeOpacity={0.8}
       >
-        {isUploadingPhoto ? (
-          <ActivityIndicator color={colors.white} />
+        {isUploadingPhoto || isConfirming ? (
+          <ActivityIndicator color={colors.base} />
         ) : (
-          <Text style={styles.confirmButtonText}>
-            {isConfirming ? "Saving..." : "Confirm"}
-          </Text>
+          <Text style={styles.confirmButtonText}>Save changes</Text>
         )}
       </TouchableOpacity>
     </ScrollView>
@@ -162,89 +169,94 @@ export default function EditInfoScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: colors.base, 
-    paddingTop: 60 
+  container: {
+    flex: 1,
+    backgroundColor: colors.base,
   },
-  content: { paddingHorizontal: 24, paddingBottom: 40 },
+  content: {
+    paddingHorizontal: 20,
+    paddingTop: 60,
+    paddingBottom: 40,
+  },
   avatarSection: {
     alignItems: "center",
-    marginTop: 8,
-    marginBottom: 8,
+    marginTop: 20,
+    marginBottom: 28,
   },
   avatar: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    borderWidth: 3,
-    borderColor: colors.textMuted,
-    backgroundColor: colors.accent,
-  },
-  removePhotoButton: {
-    marginTop: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    width: 130,
+    height: 130,
     borderRadius: 999,
-    backgroundColor: colors.bgSecondary2,
-    borderWidth: 2,
     borderColor: colors.accent,
-  },
-  removePhotoText: {
-    color: colors.textMuted,
-    fontFamily: "SF-Pro-Text-Bold",
-    fontSize: 13,
+    borderWidth: 4,
   },
   avatarBadge: {
     position: "absolute",
-    right: -4,
-    bottom: -2,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: colors.accent,
+    right: 4,
+    bottom: 2,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.bgSecondary2,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 2,
-    borderColor: colors.textMuted,
+    borderWidth: 4,
+    borderColor: colors.accent,
   },
   avatarBadgeText: {
-    color: colors.base,
-    fontFamily: "SF-Pro-Text-Bold",
-    fontSize: 20,
+    color: colors.accent,
+    fontFamily: "SF-Pro-Text-Semibold",
+    fontSize: 18,
     lineHeight: 20,
+    marginTop: -2,
   },
-  label: {
-    fontFamily: "SF-Pro-Text-Bold",
+  removePhotoButton: {
+    marginTop: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: colors.base,
+    borderWidth: 1,
+    borderColor: colors.bgSecondary2,
+  },
+  removePhotoText: {
     color: colors.text,
-    marginBottom: 6,
-    marginTop: 16,
+    fontFamily: "SF-Pro-Text-Semibold",
+    fontSize: 13,
+  },
+  cardGroup: {
+    backgroundColor: colors.bgSecondary1,
+    borderColor: colors.bgSecondary2,
+    borderWidth: 1,
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  inputLabel: {
+    fontFamily: "SF-Pro-Text-Semibold",
+    fontSize: 12,
+    color: colors.textMuted,
+    marginBottom: 4,
   },
   input: {
-    backgroundColor: colors.bgSecondary2,
-    borderWidth: 2,
-    borderColor: colors.accent,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 15,
-    fontFamily: "SF-Pro-Text-Medium",
-    fontSize: 15,
-    color: colors.textMuted
-  },
-  confirmButton: {
-    backgroundColor: colors.accent,
-    borderRadius: 999,
-    paddingVertical: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 30,
-    width: 120,
-    alignSelf: "center",
-    minHeight: 48,
-  },
-  confirmButtonText: {
-    color: colors.base,
     fontFamily: "SF-Pro-Text-Semibold",
     fontSize: 16,
+    color: colors.text,
+    paddingVertical: 6,
+  },
+  confirmButton: {
+    alignSelf: "center",
+    width: "100%",
+    height: 48,
+    backgroundColor: colors.accent,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 20
+  },
+  confirmButtonText: {
+    fontFamily: "SF-Pro-Text-Semibold",
+    fontSize: 16,
+    color: colors.base,
   },
 });
