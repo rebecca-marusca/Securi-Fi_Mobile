@@ -8,6 +8,7 @@ type SettingsRowProps = {
   label: string;
   onPress: () => void;
   showChevron?: boolean;
+  isDestructive?: boolean;
 };
 
 export function SettingsRow({
@@ -15,17 +16,21 @@ export function SettingsRow({
   label,
   onPress,
   showChevron = true,
+  isDestructive = false,
 }: SettingsRowProps) {
+  const iconColor = isDestructive ? colors.redWave1 ?? "#E57373" : colors.accent;
+  const textColor = isDestructive ? colors.redWave1 ?? "#E57373" : colors.text;
+
   return (
-    <TouchableOpacity style={styles.row} onPress={onPress}>
-      <View style={styles.iconSquare}>
-        <SymbolView name={icon} size={25} tintColor={colors.accent} />
+    <TouchableOpacity style={styles.row} onPress={onPress} activeOpacity={0.7}>
+      <View style={[styles.iconSquare]}>
+        <SymbolView name={icon} size={25} tintColor={iconColor} />
       </View>
-      <Text style={styles.label}>{label}</Text>
+      <Text style={[styles.label]}>{label}</Text>
       {showChevron && (
         <SymbolView
           name="chevron.right"
-          size={15}
+          size={14}
           tintColor={colors.accent}
           weight="bold"
         />
@@ -36,36 +41,24 @@ export function SettingsRow({
 
 const styles = StyleSheet.create({
   row: {
-    alignSelf: "center",
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.bgSecondary1,
-    borderColor: colors.bgSecondary2,
-    borderWidth: 1,
-    width: 325,
-    height: 60,
-    borderRadius: 10,
-    paddingVertical: 1,
-    paddingHorizontal: 15,
-    paddingLeft: 8,
-    marginBottom: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
   },
   iconSquare: {
-    width: 40,
-    height: 40,
+    width: 36,
+    height: 36,
     borderRadius: 10,
-    backgroundColor: colors.bgSecondary1,
-    borderColor: colors.bgSecondary2,
-    borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
     marginRight: 12,
   },
+
   label: {
     flex: 1,
-    fontFamily: "SF-Pro-Text-Semibold",
-    fontSize: 17,
+    fontFamily: "SF-Pro-Text-Medium",
     color: colors.text,
+    fontSize: 17,
   },
 });
-

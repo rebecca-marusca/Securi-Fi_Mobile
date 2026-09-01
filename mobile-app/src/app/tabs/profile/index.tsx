@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { colors } from "@/theme/colors";
 import { useRouter } from "expo-router";
-import { Alert, Image, Linking, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, Image, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -20,7 +20,6 @@ export default function ProfileScreen() {
         onPress: async () => {
           try {
             await signOut();
-            // Root _layout.tsx will detect the auth change and redirect automatically.
           } catch (error) {
             Alert.alert(
               "Error",
@@ -35,9 +34,9 @@ export default function ProfileScreen() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <AnimatedWaveHeader
-        color1= { colors.greenWave1 }
-        color2= { colors.greenWave2 }
-        color3= { colors.greenWave3 }
+        color1={colors.greenWave1}
+        color2={colors.greenWave2}
+        color3={colors.greenWave3}
       />
       <Image
         source={
@@ -50,38 +49,61 @@ export default function ProfileScreen() {
 
       <Text style={styles.name}>{profile?.displayName ?? "display_name"}</Text>
 
-      <SettingsRow
-        icon="pencil.line"
-        label="Edit Info"
-        onPress={() => router.push("/tabs/profile/edit-info")}
-      />
+      
 
-      <SettingsRow
-        icon="bell.fill"
-        label="Notifications"
-        onPress={() => router.push("/tabs/profile/notifications")}
-      />
-      <SettingsRow
-        icon="point.topleft.down.to.point.bottomright.curvepath"
-        label="Configure Nodes"
-        onPress={() => router.push("/tabs/profile/nodes")}
-      />
-      <SettingsRow
-        icon="questionmark.circle"
-        label="Help & Support"
-        showChevron={false}
-        onPress={() =>
-          Linking.openURL(
-            "mailto:support@securi-fi.app?subject=Securi-Fi Support",
-          )
-        }
-      />
-      <SettingsRow
-        icon="rectangle.portrait.and.arrow.right"
-        label="Log out"
-        onPress={handleLogout}
-        showChevron={false}
-      />
+      {/* Account Section */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>ACCOUNT</Text>
+        <View style={styles.cardGroup}>
+          <SettingsRow
+            icon="pencil.line"
+            label="Edit info"
+            onPress={() => router.push("/tabs/profile/edit-info")}
+          />
+          <View style={styles.divider} />
+          <SettingsRow
+            icon="bell.fill"
+            label="Notifications"
+            onPress={() => router.push("/tabs/profile/notifications")}
+          />
+        </View>
+      </View>
+
+      {/* System Section */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>SYSTEM</Text>
+        <View style={styles.cardGroup}>
+          <SettingsRow
+            icon="point.topleft.down.to.point.bottomright.curvepath"
+            label="Configure nodes"
+            onPress={() => router.push("/tabs/profile/nodes")}
+          />
+        </View>
+      </View>
+
+      {/* Support & Session Section */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>HAVING ISSUES?</Text>
+        <View style={styles.cardGroup}>
+          <SettingsRow
+            icon="questionmark.circle"
+            label="Help & Support"
+            onPress={() =>
+              Linking.openURL(
+                "mailto:support@securi-fi.app?subject=Securi-Fi Support",
+              )
+            }
+          />
+        </View>
+      </View>
+        <TouchableOpacity
+          style={styles.logoutButton}
+          onPress={handleLogout}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.logoutText}>Log out</Text>
+        </TouchableOpacity>
+
     </ScrollView>
   );
 }
@@ -97,21 +119,59 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
   avatar: {
-    width: 125,
-    height: 125,
-    borderRadius: 60,
+    width: 150,
+    height: 150,
+    borderRadius: 999,
     alignSelf: "center",
-    marginBottom: 16,
-    borderColor: colors.textMuted,
-    borderWidth: 3,
+    borderColor: colors.base,
+    borderWidth: 10,
     marginTop: 60,
   },
   name: {
-    fontFamily: "SF-Pro-Text-Bold",
-    fontSize: 30,
-    color: colors.textMuted,
+    fontFamily: "SF-Pro-Text-Semibold",
+    fontSize: 23,
+    color: colors.text,
     textAlign: "center",
-    marginBottom: 32,
-  }
+    marginBottom: 16,
+  },
+  section: {
+    marginBottom: 20,
+  },
+  sectionTitle: {
+    fontFamily: "SF-Pro-Text-Semibold",
+    fontSize: 12,
+    color: colors.textMuted,
+    letterSpacing: 0.8,
+    marginBottom: 8,
+    marginLeft: 4,
+  },
+  cardGroup: {
+    backgroundColor: colors.bgSecondary1,
+    borderColor: colors.bgSecondary2,
+    borderWidth: 1,
+    borderRadius: 16,
+    overflow: "hidden",
+  },
+  divider: {
+    height: 1,
+    backgroundColor: colors.bgSecondary2,
+    marginLeft: 60, // Aligns divider past the icon
+  },
+logoutButton: {
+    alignSelf: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+    marginTop: 8,
+    backgroundColor: colors.base,
+    borderColor: colors.bgSecondary2,
+    borderWidth: 1,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  logoutText: {
+    fontFamily: "SF-Pro-Text-Semibold",
+    fontSize: 15,
+    color: colors.redWave1 ?? "#E57373",
+  },
 });
-

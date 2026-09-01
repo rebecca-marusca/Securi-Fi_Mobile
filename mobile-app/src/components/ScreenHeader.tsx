@@ -29,7 +29,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingTop: 20,
-    paddingBottom: 24,
+    paddingBottom: 40,
   },
   iconContainer: {
     width: 40,
@@ -39,7 +39,7 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: "center",
     fontFamily: "SF-Pro-Text-Bold",
-    fontSize: 26,
+    fontSize: 25,
     color: colors.text,
   },
 });
