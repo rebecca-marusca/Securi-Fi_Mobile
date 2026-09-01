@@ -10,6 +10,7 @@ export const colors = {
   greenWave3: "#386A5A",
   greenWave2: "#2D5A4C",
   greenWave1: "#1E4438",
+  alert: "#B3453D",
   redWave3: "#fc6161",
   redWave2: "#ea4444",
   redWave1: "#e20909", // movement detected

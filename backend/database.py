@@ -156,6 +156,15 @@ def dismiss_event(eid: str, false_alarm_description: Optional[str] = None):
     if false_alarm_description is not None:
         update_data["falseAlarm"] = false_alarm_description
     db.collection("events").document(eid).update(update_data)
+
+    # Clear activeEventId on the home document if this was the active event
+    doc = db.collection("events").document(eid).get()
+    if doc.exists:
+        hid = doc.to_dict().get("hid")
+        if hid:
+            home = db.collection("homes").document(hid).get()
+            if home.exists and home.to_dict().get("activeEventId") == eid:
+                db.collection("homes").document(hid).update({"activeEventId": None})
     
 def get_event(eid: str) -> Optional[dict]:
     doc = db.collection("events").document(eid).get()

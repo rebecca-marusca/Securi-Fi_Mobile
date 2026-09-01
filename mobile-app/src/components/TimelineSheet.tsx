@@ -1,5 +1,5 @@
-import { forwardRef, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { forwardRef, useCallback } from 'react';
+import { View, StyleSheet } from 'react-native';
 import BottomSheet, { BottomSheetBackdrop, BottomSheetView } from '@gorhom/bottom-sheet';
 import { colors } from '@/theme/colors';
 import { TimelineEntryCard } from '@/components/TimelineEntryCard';
@@ -17,9 +17,17 @@ const MOCK_ENTRIES: TimelineEntry[] = [
   { id: '2', type: 'nodes_on', date: '06.10.2026', title: 'NODES TURNED ON' },
 ];
 
-export const TimelineSheet = forwardRef<BottomSheet>((_, ref) => {
-  const snapPoints = useMemo(() => ['50%', '85%'], []);
-  const latestEntry = MOCK_ENTRIES[0];
+type TimelineSheetProps = {
+  entry?: TimelineEntry | null;
+  entries?: TimelineEntry[];
+};
+
+export const TimelineSheet = forwardRef<BottomSheet, TimelineSheetProps>(({ entry, entries }, ref) => {
+  const displayEntries = entries && entries.length > 0
+    ? entries
+    : entry
+    ? [entry]
+    : MOCK_ENTRIES.slice(0, 1);
 
   const renderBackdrop = useCallback(
     (props: any) => (
@@ -37,22 +45,20 @@ export const TimelineSheet = forwardRef<BottomSheet>((_, ref) => {
     <BottomSheet
       ref={ref}
       index={-1}
-      snapPoints={snapPoints}
+      enableDynamicSizing // Automatically resizes to fit children
       enablePanDownToClose
       backdropComponent={renderBackdrop}
       backgroundStyle={styles.sheetBackground}
       handleIndicatorStyle={styles.handleIndicator}
     >
-      <BottomSheetView style={styles.container}>
-        <View style={styles.content}>
-          {latestEntry && (
-            <TimelineEntryCard
-              key={latestEntry.id}
-              entry={latestEntry}
-              isLast={true}
-            />
-          )}
-        </View>
+      <BottomSheetView style={styles.content}>
+        {displayEntries.map((item, index) => (
+          <TimelineEntryCard
+            key={item.id || index}
+            entry={item}
+            isLast={index === displayEntries.length - 1}
+          />
+        ))}
       </BottomSheetView>
     </BottomSheet>
   );
@@ -63,14 +69,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.base,
   },
   handleIndicator: {
-    backgroundColor: colors.accent,
-  },
-  container: {
-    flex: 1,
+    backgroundColor: "#B3453D",
   },
   content: {
     paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 40,
+    paddingTop: 10,
   },
 });

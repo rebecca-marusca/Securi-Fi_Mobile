@@ -4,7 +4,9 @@ import BottomSheet, { BottomSheetBackdrop, BottomSheetModal, BottomSheetView } f
 import { colors } from '@/theme/colors';
 import { LinearGradient } from "expo-linear-gradient";
 import { FinalToggleRow } from "@/components/ToggleRow";
-import { ArmedNode, armedNodes } from '@/services/userProfile';
+type ArmedNodeState = {
+  armed: boolean;
+};
 
 export interface SelectedNodeData {
   id: string;
@@ -21,9 +23,9 @@ interface NodeControlSheetProps {
 export const NodeControlSheet = forwardRef<BottomSheetModal, NodeControlSheetProps>(
   ({ selectedNode, onRestart, onShutdown }, ref) => {
     const snapPoints = useMemo(() => ['35%'], []);
-    const [prefs, setPrefs] = useState<ArmedNode>(
-      armedNodes
-    );
+    const [prefs, setPrefs] = useState<ArmedNodeState>({
+      armed: false,
+    });
 
     const renderBackdrop = useCallback(
       (props: any) => (
@@ -46,10 +48,10 @@ export const NodeControlSheet = forwardRef<BottomSheetModal, NodeControlSheetPro
     const handleShutdown = () => {
       if (selectedNode) onShutdown?.(selectedNode.id);
     };
-    const handleToggle = async (key: keyof ArmedNode, value: boolean) => {
+    const handleToggle = async (key: keyof ArmedNodeState, value: boolean) => {
       const updated = { ...prefs, [key]: value };
       setPrefs(updated);
-    }
+    };
 
     return (
       <BottomSheetModal
