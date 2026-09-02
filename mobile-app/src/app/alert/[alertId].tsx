@@ -74,6 +74,7 @@ export default function AlertScreen() {
   const { hid } = useHome();
 
   const currentAlertId = alertId || activeAlert?.alertId;
+  const eventHomeId = activeAlert?.hid ?? hid;
   const [event, setEvent] = useState<SecuriFiEvent | null>(activeAlert?.event ?? null);
   const [dbNodes, setDbNodes] = useState<FirestoreNode[]>([]);
   const [isDismissing, setIsDismissing] = useState(false);
@@ -82,9 +83,15 @@ export default function AlertScreen() {
 
   // 1. Subscribe to active event document in real-time
   useEffect(() => {
-    if (!currentAlertId) return;
+    if (!currentAlertId || !eventHomeId) return;
 
-    const eventDocRef = doc(getFirestore(), 'events', currentAlertId);
+    const eventDocRef = doc(
+      getFirestore(),
+      'home_events',
+      eventHomeId,
+      'events',
+      currentAlertId
+    );
     const unsub = onSnapshot(
       eventDocRef,
       (snap) => {
@@ -96,7 +103,7 @@ export default function AlertScreen() {
     );
 
     return unsub;
-  }, [currentAlertId]);
+  }, [currentAlertId, eventHomeId]);
 
   // 2. Subscribe to home's nodes for real-time nickname and positions
   useEffect(() => {

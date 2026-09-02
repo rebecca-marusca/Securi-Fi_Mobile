@@ -6,6 +6,7 @@ import {
   type ReactNode,
 } from "react";
 import {
+  collection,
   doc,
   getFirestore,
   onSnapshot,
@@ -48,6 +49,7 @@ export function AlertProvider({ children }: { children: ReactNode }) {
     let unsubLinks: (() => void) | null = null;
     let unsubHome: (() => void) | null = null;
     let unsubEvent: (() => void) | null = null;
+    let unsubOngoingEvents: (() => void) | null = null;
 
     // 1. Subscribe to user <-> home links to get current home ID
     unsubLinks = subscribeToUserHomeLinks(user.uid, (links) => {
@@ -60,6 +62,10 @@ export function AlertProvider({ children }: { children: ReactNode }) {
       if (unsubEvent) {
         unsubEvent();
         unsubEvent = null;
+      }
+      if (unsubOngoingEvents) {
+        unsubOngoingEvents();
+        unsubOngoingEvents = null;
       }
 
       if (!hid) {
@@ -77,15 +83,62 @@ export function AlertProvider({ children }: { children: ReactNode }) {
           unsubEvent();
           unsubEvent = null;
         }
+        if (unsubOngoingEvents) {
+          unsubOngoingEvents();
+          unsubOngoingEvents = null;
+        }
 
         if (!activeEventId) {
-          setActiveAlert(null);
-          setIsLoading(false);
+          // Older homes (and homes created outside the alert flow) may not
+          // maintain activeEventId. Event documents are the source of truth:
+          // an event without endedAt is still ongoing.
+          const eventsRef = collection(
+            getFirestore(),
+            "home_events",
+            hid,
+            "events"
+          );
+          unsubOngoingEvents = onSnapshot(
+            eventsRef,
+            (eventsSnap) => {
+              const ongoingEvents = eventsSnap.docs
+                .map((eventDoc) => ({
+                  eid: eventDoc.id,
+                  ...eventDoc.data(),
+                }) as SecuriFiEvent)
+                .filter((event) => !event.endedAt && !event.dismissedByUser)
+                .sort((a, b) => b.startedAt.toMillis() - a.startedAt.toMillis());
+
+              const event = ongoingEvents[0];
+              setActiveAlert(
+                event
+                  ? {
+                      alertId: event.eid,
+                      eventType: event.eventType,
+                      hid,
+                      event,
+                    }
+                  : null
+              );
+              setIsLoading(false);
+            },
+            (error) => {
+              console.error("[AlertContext] Error listening to ongoing events:", error);
+              setActiveAlert(null);
+              setIsLoading(false);
+            }
+          );
           return;
         }
 
         // 3. Subscribe directly to the single active event document
-        const eventDocRef = doc(getFirestore(), "events", activeEventId);
+        const eventDocRef = doc(
+          getFirestore(),
+          "home_events",
+          hid,
+          "events",
+          activeEventId
+        );
         unsubEvent = onSnapshot(
           eventDocRef,
           (eventSnap) => {
@@ -130,6 +183,7 @@ export function AlertProvider({ children }: { children: ReactNode }) {
       if (unsubLinks) unsubLinks();
       if (unsubHome) unsubHome();
       if (unsubEvent) unsubEvent();
+      if (unsubOngoingEvents) unsubOngoingEvents();
     };
   }, [user, authLoading]);
 
@@ -141,4 +195,3 @@ export function AlertProvider({ children }: { children: ReactNode }) {
 }
 
 export const useActiveAlert = () => useContext(AlertContext);
-
