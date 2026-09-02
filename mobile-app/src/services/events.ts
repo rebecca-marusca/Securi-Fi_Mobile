@@ -87,3 +87,26 @@ export function subscribeToTimeline(
     chunkUnsubscribes.clear();
   };
 }
+
+export function subscribeToEventChunks(
+  hid: string,
+  eid: string,
+  callback: (chunks: Chunk[]) => void
+) {
+  const firestore = getFirestore();
+  const chunksQuery = query(
+    collection(firestore, 'home_events', hid, 'events', eid, 'chunks'),
+    orderBy('savedAt', 'asc')
+  );
+
+  return onSnapshot(
+    chunksQuery,
+    (snapshot) => {
+      const chunks = snapshot.docs.map(
+        (doc) => ({ cid: doc.id, ...doc.data() } as Chunk)
+      );
+      callback(chunks);
+    },
+    (error) => console.error(`[event chunks] listener error for ${eid}:`, error)
+  );
+}

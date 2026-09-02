@@ -8,6 +8,7 @@ import type { Chunk, ChunkPackage, SecuriFiEvent } from "@/types/firestore";
 import { useHome } from "@/hooks/useHome";
 import { subscribeToTimeline } from "@/services/events";
 import { subscribeToNodesForHome } from "@/services/nodes";
+import { bold, buildPlayByPlayFromPackages, text } from "@/utils/eventDescriptions";
 
 function formatTimelineDate(timestamp?: any): string {
   if (!timestamp) return "";
@@ -67,11 +68,6 @@ function formatTimelineTime(timestamp?: any): string {
   return `${hh}:${mm}`;
 }
 
-function getNodeDisplayName(nodeId?: string, nodeNameMap?: Record<string, string>): string {
-  if (!nodeId) return "";
-  return nodeNameMap?.[nodeId] || `Node ${nodeId}`;
-}
-
 function getRelativeDateLabel(timestamp?: any): string {
   if (!timestamp) return "";
   let date: Date;
@@ -110,76 +106,14 @@ function getRelativeDateLabel(timestamp?: any): string {
   }
 }
 
-function formatPackageTime(timestamp?: string): string {
-  if (!timestamp) return "Time unavailable";
-  const date = new Date(timestamp);
-  if (isNaN(date.getTime())) return timestamp;
-  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-}
-
-function friendlyWarning(warning?: string | null): string | null {
-  if (!warning) return null;
-  return warning.replace(/[_-]/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
-
-function bold(text: string): TimelineDescriptionLine["parts"][number] {
-  return { text, bold: true };
-}
-
-function text(text: string): TimelineDescriptionLine["parts"][number] {
-  return { text };
-}
-
-function describeNodeReading(node: ChunkPackage["nodes"][number], nodeNameMap: Record<string, string>): TimelineDescriptionLine["parts"] | null {
-  const nodeName = getNodeDisplayName(node.nodeId, nodeNameMap);
-
-  if (node.sensors?.flame) return [bold(nodeName), text(" detected "), bold("flame or smoke"), text(".\n")];
-  if (node.sensors?.gas) return [bold(nodeName), text(" detected "), bold("gas"), text(".\n")];
-  if (node.isAlarm) return [bold(nodeName), text(" reported an "), bold("alarm"), text(".\n")];
-  if (node.movementPct > 0) {
-    return [bold(nodeName), text(" registered "), bold(`${node.movementPct}%`), text(` movement`), text(".\n")];
-  }
-  return null;
-}
-
-function describePackage(pkg: ChunkPackage, nodeNameMap: Record<string, string>): TimelineDescriptionLine {
-  const observations: TimelineDescriptionLine["parts"][] = [];
-  const warning = friendlyWarning(pkg.warningType ?? pkg.warning_type);
-
-  for (const node of pkg.nodes ?? []) {
-    const observation = describeNodeReading(node, nodeNameMap);
-    if (observation) observations.push(observation);
-  }
-
-  return {
-    parts: [
-      bold(formatPackageTime(pkg.timestamp)),
-      text("  "),
-      ...(warning ? [bold(warning), bold(":\n")] : []),
-      ...(observations.length
-        ? observations.flatMap((observation, index) => [
-            ...observation,
-          ])
-        : [text("Sensors continued monitoring.")]),
-    ],
-  };
-}
-
 type TimelineEvent = SecuriFiEvent & { chunks: Chunk[] };
 
 function buildPlayByPlay(
   event: TimelineEvent,
   nodeNameMap: Record<string, string>
 ): TimelineDescriptionLine[] {
-  const packages = event.chunks
-    .flatMap((chunk) => chunk.packages ?? [])
-    .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-
-  if (!packages.length) {
-    return [{ parts: [text("No sensor samples were saved for this event.")] }];
-  }
-
-  return packages.map((pkg) => describePackage(pkg, nodeNameMap));
+  const packages = event.chunks.flatMap((chunk) => chunk.packages ?? []);
+  return buildPlayByPlayFromPackages(packages, nodeNameMap);
 }
 
 function eventTypeDetails(eventType: SecuriFiEvent["eventType"]): Pick<TimelineEntry, "eventType" | "title"> {
