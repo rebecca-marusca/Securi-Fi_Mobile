@@ -3,14 +3,8 @@ import { colors } from "@/theme/colors";
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from "react-native";
 import AnimatedWaveHeader from "@/components/AnimatedWaveHeader";
 import { TimelineEntryCard } from "@/components/TimelineEntryCard";
-import {
-  TimelineFilter,
-  emptyFilterMessage,
-  entryMatchesFilter,
-  type TimelineFilterId,
-} from "@/components/TimelineFilter";
-import type { TimelineEntry } from "@/types/timeline";
-import type { SecuriFiEvent } from "@/types/firestore";
+import type { TimelineDescriptionLine, TimelineEntry } from "@/types/timeline";
+import type { Chunk, ChunkPackage, SecuriFiEvent } from "@/types/firestore";
 import { useHome } from "@/hooks/useHome";
 import { subscribeToTimeline } from "@/services/events";
 import { subscribeToNodesForHome } from "@/services/nodes";
@@ -116,111 +110,127 @@ function getRelativeDateLabel(timestamp?: any): string {
   }
 }
 
-function getEventCategory(entry: TimelineEntry): TimelineFilterId[] {
-  if (["fire", "gas_leak", "break_in"].includes(entry.type)) {
-    return ["all", "hazards"];
+function formatPackageTime(timestamp?: string): string {
+  if (!timestamp) return "Time unavailable";
+  const date = new Date(timestamp);
+  if (isNaN(date.getTime())) return timestamp;
+  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+}
+
+function friendlyWarning(warning?: string | null): string | null {
+  if (!warning) return null;
+  return warning.replace(/[_-]/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function bold(text: string): TimelineDescriptionLine["parts"][number] {
+  return { text, bold: true };
+}
+
+function text(text: string): TimelineDescriptionLine["parts"][number] {
+  return { text };
+}
+
+function describeNodeReading(node: ChunkPackage["nodes"][number], nodeNameMap: Record<string, string>): TimelineDescriptionLine["parts"] | null {
+  const nodeName = getNodeDisplayName(node.nodeId, nodeNameMap);
+
+  if (node.sensors?.flame) return [bold(nodeName), text(" detected "), bold("flame or smoke"), text(".\n")];
+  if (node.sensors?.gas) return [bold(nodeName), text(" detected "), bold("gas"), text(".\n")];
+  if (node.isAlarm) return [bold(nodeName), text(" reported an "), bold("alarm"), text(".\n")];
+  if (node.movementPct > 0) {
+    return [bold(nodeName), text(" registered "), bold(`${node.movementPct}%`), text(` movement`), text(".\n")];
   }
-  if (["nodes_on", "nodes_off"].includes(entry.type)) {
-    return ["all", "nodes"];
+  return null;
+}
+
+function describePackage(pkg: ChunkPackage, nodeNameMap: Record<string, string>): TimelineDescriptionLine {
+  const observations: TimelineDescriptionLine["parts"][] = [];
+  const warning = friendlyWarning(pkg.warningType ?? pkg.warning_type);
+
+  for (const node of pkg.nodes ?? []) {
+    const observation = describeNodeReading(node, nodeNameMap);
+    if (observation) observations.push(observation);
   }
-  if (["false_alarm"].includes(entry.type)) {
-    return ["all", "false_alarms"];
+
+  return {
+    parts: [
+      bold(formatPackageTime(pkg.timestamp)),
+      text("  "),
+      ...(warning ? [bold(warning), bold(":\n")] : []),
+      ...(observations.length
+        ? observations.flatMap((observation, index) => [
+            ...observation,
+          ])
+        : [text("Sensors continued monitoring.")]),
+    ],
+  };
+}
+
+type TimelineEvent = SecuriFiEvent & { chunks: Chunk[] };
+
+function buildPlayByPlay(
+  event: TimelineEvent,
+  nodeNameMap: Record<string, string>
+): TimelineDescriptionLine[] {
+  const packages = event.chunks
+    .flatMap((chunk) => chunk.packages ?? [])
+    .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+  if (!packages.length) {
+    return [{ parts: [text("No sensor samples were saved for this event.")] }];
   }
-  return ["all"];
+
+  return packages.map((pkg) => describePackage(pkg, nodeNameMap));
+}
+
+function eventTypeDetails(eventType: SecuriFiEvent["eventType"]): Pick<TimelineEntry, "eventType" | "title"> {
+  switch (eventType) {
+    case "fire":
+      return { eventType: "fire", title: "Fire detection" };
+    case "gasLeak":
+      return { eventType: "gas_leak", title: "Gas leak detection" };
+    case "intrusion":
+      return { eventType: "intrusion", title: "Intrusion" };
+  }
 }
 
 function mapEventToTimelineEntry(
-  event: SecuriFiEvent,
+  event: TimelineEvent,
   nodeNameMap: Record<string, string>
 ): TimelineEntry {
   const date = formatTimelineDate(event.startedAt);
   const startTime = formatTimelineTime(event.startedAt);
-  const endTime = event.type !== "nodeStatus" && (event as any).endedAt ? formatTimelineTime((event as any).endedAt) : undefined;
+  const endTime = (event as any).endedAt ? formatTimelineTime((event as any).endedAt) : undefined;
 
-  if (event.type === "nodeStatus") {
-    const isTurnedOn = event.nodeAction === "on";
-    const nodeName = getNodeDisplayName(event.nodeId, nodeNameMap);
-    return {
-      id: event.eid,
-      type: isTurnedOn ? "nodes_on" : "nodes_off",
-      date,
-      title: isTurnedOn ? "Nodes turned on" : "Nodes turned off",
-      description: nodeName ? `${nodeName} turned ${event.nodeAction}.` : undefined,
-      startTime,
-      rawStartedAt: event.startedAt,
-    };
+  const typeDetails = eventTypeDetails(event.eventType);
+  const isFalseAlarm = event.falseAlarm === true || typeof event.falseAlarm === "string";
+  const status = [isFalseAlarm && "False alarm", event.dismissedByUser && "Dismissed"].filter(Boolean).join(", ");
+  const descriptionLines: TimelineDescriptionLine[] = [];
+
+  if (status) {
+    descriptionLines.push({
+      parts: [bold("Status: "), text(status)],
+    });
   }
 
-  // False alarm check (for intrusion, fire, or gas leak)
-  if (event.falseAlarm) {
-    return {
-      id: event.eid,
-      type: "false_alarm",
-      date,
-      title: "False alarm",
-      description:
-        typeof event.falseAlarm === "string"
-          ? `"${event.falseAlarm}"`
-          : "Event was dismissed as a false alarm.",
-      startTime,
-      endTime,
-      rawStartedAt: event.startedAt,
-    };
+  if (typeof event.falseAlarm === "string" && event.falseAlarm.trim()) {
+    descriptionLines.push({
+      parts: [bold("Reason: "), text(event.falseAlarm.trim())],
+    });
+  } else if (isFalseAlarm) {
+    descriptionLines.push({
+      parts: [bold("Reason: "), text("Marked as a false alarm.")],
+    });
   }
 
-  if (event.type === "fire") {
-    const nodeName = getNodeDisplayName(event.nodeId, nodeNameMap);
-    return {
-      id: event.eid,
-      type: "fire",
-      date,
-      title: "Fire detection",
-      description: nodeName
-        ? `Flame or smoke detected near ${nodeName}.${event.rawReading ? ` (Reading: ${event.rawReading})` : ""}`
-        : "Flame or smoke detected by hazard sensors.",
-      startTime,
-      endTime,
-      rawStartedAt: event.startedAt,
-    };
-  }
+  //descriptionLines.push({ parts: [bold("Play-by-play")] });
+  descriptionLines.push(...buildPlayByPlay(event, nodeNameMap));
 
-  if (event.type === "gasLeak") {
-    const nodeName = getNodeDisplayName(event.nodeId, nodeNameMap);
-    return {
-      id: event.eid,
-      type: "gas_leak",
-      date,
-      title: "Gas leak detection",
-      description: nodeName
-        ? `Gas concentration detected near ${nodeName}`
-        : "Gas concentration threshold exceeded.",
-      startTime,
-      endTime,
-      rawStartedAt: event.startedAt,
-    };
-  }
-
-  if (event.type === "intrusion") {
-    const nodeName = event.nodeId ? getNodeDisplayName(event.nodeId, nodeNameMap) : null;
-
-    return {
-      id: event.eid,
-      type: "break_in",
-      date,
-      title: "Break-in",
-      description: `There was a break-in detected in your home, detection starting at ${startTime} and ending at ${endTime}.`,
-      startTime,
-      endTime,
-      rawStartedAt: event.startedAt,
-    };
-  }
-
-  // Fallback for unhandled cases
   return {
-    id: (event as any).eid ?? "unknown",
-    type: "break_in",
+    id: event.eid,
+    eventType: typeDetails.eventType,
     date,
-    title: "Unknown Event",
+    title: status ? `${typeDetails.title} — ${status}` : typeDetails.title,
+    descriptionLines,
     startTime,
     endTime,
     rawStartedAt: event.startedAt,
@@ -231,10 +241,9 @@ const NO_DATE_LABELS = new Set(["Today", "Yesterday"]);
 
 export default function TimelineScreen() {
   const { hid, isLoading: isHomeLoading } = useHome();
-  const [rawEvents, setRawEvents] = useState<SecuriFiEvent[]>([]);
+  const [rawEvents, setRawEvents] = useState<TimelineEvent[]>([]);
   const [nodes, setNodes] = useState<any[]>([]);
   const [isLoadingEvents, setIsLoadingEvents] = useState(true);
-  const [filter, setFilter] = useState<TimelineFilterId>("all");
 
   // Subscribe to home's nodes for real-time nickname resolution
   useEffect(() => {
@@ -281,14 +290,10 @@ export default function TimelineScreen() {
     return rawEvents.map((event) => mapEventToTimelineEntry(event, nodeNameMap));
   }, [rawEvents, nodeNameMap]);
 
-  const filteredEntries = useMemo(() => {
-    return entries.filter((entry) => entryMatchesFilter(entry.type, filter));
-  }, [entries, filter]);
-
-  // Group filtered entries by relative date
+  // Group entries by relative date.
   const groupedEntries = useMemo(() => {
     const groups: Record<string, TimelineEntry[]> = {};
-    for (const entry of filteredEntries) {
+    for (const entry of entries) {
       const label = getRelativeDateLabel(entry.rawStartedAt);
       if (!groups[label]) {
         groups[label] = [];
@@ -296,7 +301,7 @@ export default function TimelineScreen() {
       groups[label].push(entry);
     }
     return groups;
-  }, [filteredEntries]);
+  }, [entries]);
 
   // Order groups by date (Today first, then Yesterday, etc.)
   const groupOrder = ["Today", "Yesterday", "This Week", "This Month", "This Year", "Earlier"];
@@ -308,18 +313,15 @@ export default function TimelineScreen() {
 
   return (
     <View style={styles.container}>
-      <AnimatedWaveHeader
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+        <AnimatedWaveHeader
         color1={colors.greenWave1}
         color2={colors.greenWave2}
         color3={colors.greenWave3}
-      />
-      <View style={styles.filterSlot}>
-        <TimelineFilter value={filter} onChange={setFilter} />
-      </View>
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+        />
         {isLoading ? (
           <ActivityIndicator size="large" color={colors.accent} style={styles.loader} />
-        ) : filteredEntries.length > 0 ? (
+        ) : entries.length > 0 ? (
           <>
             {sortedGroupLabels.map((label, labelIndex) => {
               const groupEntries = groupedEntries[label];
@@ -365,7 +367,7 @@ export default function TimelineScreen() {
           </>
         ) : (
           <View>
-            <Text style={styles.endText}>{emptyFilterMessage(filter, !!hid)}</Text>
+            <Text style={styles.endText}>{hid ? "No events recorded yet" : "Select a home to view its events"}</Text>
           </View>
         )}
       </ScrollView>
@@ -382,11 +384,9 @@ const styles = StyleSheet.create({
     flex: 1,
     width: "100%",
   },
-  filterSlot: {
-    paddingTop: 130,
-  },
   scrollContent: {
-    paddingBottom: 121,
+    paddingTop: 150,
+    paddingBottom: 120,
   },
   endText: {
     paddingTop: 20,

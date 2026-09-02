@@ -8,7 +8,7 @@ import {
 
 type ActiveAlert = {
   alertId: string;
-  type: "break-in" | "fire" | "flood";
+  type: "intrusion" | "fire" | "flood";
 } | null;
 
 type AlertContextType = {
@@ -38,7 +38,7 @@ export function AlertProvider({ children }: { children: ReactNode }) {
     /*//placeholder for now:
     setActiveAlert({
       alertId: "test-123",
-    type: "fire", // Change to "break-in" or "flood" as needed
+    type: "fire", // Change to "intrusion" or "flood" as needed
     }); */
     setActiveAlert(null);// No active alert for now
     setIsLoading(false);

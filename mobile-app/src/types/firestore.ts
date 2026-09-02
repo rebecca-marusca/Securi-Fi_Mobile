@@ -67,24 +67,52 @@ type BaseEvent = {
   startedAt: Timestamp;
   nodeId?: string;
   dismissedByUser?: boolean;
-  falseAlarm?: boolean | string;
+  // `falseAlarm` is currently a reason string. Keep boolean support while the
+  // dismissal flow is being migrated so older event documents remain readable.
+  falseAlarm?: boolean | string | null;
 };
 
 type IntrusionEvent = BaseEvent & {
-  type: 'intrusion';
+  eventType: 'intrusion';
   endedAt?: Timestamp;
 };
 
 type HazardEvent = BaseEvent & {
-  type: 'fire' | 'gasLeak';
+  eventType: 'fire' | 'gasLeak';
   rawReading?: number;
   endedAt?: Timestamp;
 };
 
-type NodeStatusEvent = BaseEvent & {
-  type: 'nodeStatus';
-  nodeId: string;
-  nodeAction: 'on' | 'off';
+export type SecuriFiEvent = IntrusionEvent | HazardEvent;
+
+export type Chunk = {
+  cid: string;
+  savedAt: Timestamp;
+  packages: ChunkPackage[];
 };
 
-export type SecuriFiEvent = IntrusionEvent | HazardEvent | NodeStatusEvent;
+export type ChunkPackage = {
+  timestamp: string;
+  warningType?: string | null;
+  // Legacy chunks used snake_case. New chunks are written with `warningType`.
+  warning_type?: string | null;
+  packageMovementPct: number;
+  isAlarm: boolean;
+  nodes: ChunkNodeReading[];
+};
+
+export type ChunkNodeReading = {
+  nodeId: string;
+  state: string;
+  movementPct: number;
+  rawMq2Reading: number;
+  isAlarm: boolean;
+  sensors: ChunkSensors;
+};
+
+export type ChunkSensors = {
+  flame: boolean;
+  gas: boolean;
+  batteryPct?: number | null;
+  battery_pct?: number | null;
+};

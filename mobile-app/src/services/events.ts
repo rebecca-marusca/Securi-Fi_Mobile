@@ -2,11 +2,10 @@ import {
   getFirestore,
   collection,
   query,
-  where,
   orderBy,
   onSnapshot,
 } from '@react-native-firebase/firestore';
-import type { SecuriFiEvent } from '@/types/firestore';
+import type { Chunk, SecuriFiEvent } from '@/types/firestore';
 import { apiFetch } from '@/services/api';
 
 export async function dismissEvent(eid: string, falseAlarmDescription?: string) {
@@ -23,22 +22,68 @@ export async function dismissEvent(eid: string, falseAlarmDescription?: string) 
 
 export function subscribeToTimeline(
   hid: string,
-  callback: (events: SecuriFiEvent[]) => void
+  callback: (events: Array<SecuriFiEvent & { chunks: Chunk[] }>) => void
 ) {
-  const q = query(
-    collection(getFirestore(), 'events'),
-    where('hid', '==', hid),
+  const firestore = getFirestore();
+  const eventsQuery = query(
+    collection(firestore, 'home_events', hid, 'events'),
     orderBy('startedAt', 'desc')
   );
+  const chunksByEvent = new Map<string, Chunk[]>();
+  const chunkUnsubscribes = new Map<string, () => void>();
+  let events: SecuriFiEvent[] = [];
 
-  return onSnapshot(
-    q,
+  const publish = () => {
+    callback(events.map((event) => ({
+      ...event,
+      chunks: chunksByEvent.get(event.eid) ?? [],
+    })));
+  };
+
+  const unsubscribeEvents = onSnapshot(
+    eventsQuery,
     (snapshot) => {
-      const events = snapshot.docs.map(
+      events = snapshot.docs.map(
         (doc) => ({ eid: doc.id, ...doc.data() } as SecuriFiEvent)
       );
-      callback(events);
+      const eventIds = new Set(events.map((event) => event.eid));
+
+      for (const [eid, unsubscribe] of chunkUnsubscribes) {
+        if (!eventIds.has(eid)) {
+          unsubscribe();
+          chunkUnsubscribes.delete(eid);
+          chunksByEvent.delete(eid);
+        }
+      }
+
+      for (const eid of eventIds) {
+        if (chunkUnsubscribes.has(eid)) continue;
+
+        const chunksQuery = query(
+          collection(firestore, 'home_events', hid, 'events', eid, 'chunks'),
+          orderBy('savedAt', 'asc')
+        );
+        const unsubscribeChunks = onSnapshot(
+          chunksQuery,
+          (chunkSnapshot) => {
+            chunksByEvent.set(eid, chunkSnapshot.docs.map(
+              (doc) => ({ cid: doc.id, ...doc.data() } as Chunk)
+            ));
+            publish();
+          },
+          (error) => console.error(`[timeline] chunks listener error for ${eid}:`, error)
+        );
+        chunkUnsubscribes.set(eid, unsubscribeChunks);
+      }
+
+      publish();
     },
-    (error) => console.error('[timeline] listener error:', error)
+    (error) => console.error('[timeline] events listener error:', error)
   );
+
+  return () => {
+    unsubscribeEvents();
+    for (const unsubscribe of chunkUnsubscribes.values()) unsubscribe();
+    chunkUnsubscribes.clear();
+  };
 }

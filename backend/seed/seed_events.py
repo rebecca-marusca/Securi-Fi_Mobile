@@ -1,5 +1,5 @@
 """
-seed_events.py — pushes fake intrusion / fire / gasLeak / nodeStatus events
+seed_events.py — pushes fake intrusion / fire / gasLeak events
 into Firestore, matching the frontend SecuriFiEvent union (types/firestore.ts).
 
 Usage:
@@ -21,7 +21,7 @@ def ts(minutes_ago: int) -> datetime:
 events = [
     {
         "hid": HID,
-        "type": "intrusion",
+        "eventType": "intrusion",
         "startedAt": ts(15),
         "dismissedByUser": False,
         "falseAlarm": False,
@@ -30,7 +30,7 @@ events = [
     # --- Intrusion: past, dismissed, flagged as false alarm ---
     {
         "hid": HID,
-        "type": "intrusion",
+        "eventType": "intrusion",
         "startedAt": ts(60 * 24),  # 1 day ago
         "endedAt": ts(60 * 24 - 5),
         "dismissedByUser": True,
@@ -39,7 +39,7 @@ events = [
     # --- Fire
     {
         "hid": HID,
-        "type": "fire",
+        "eventType": "fire",
         "startedAt": ts(60 * 24 * 29),
         "nodeId": NODE_IDS[0],
         "rawReading": 312.5,
@@ -50,7 +50,7 @@ events = [
     # --- Gas leak 
     {
         "hid": HID,
-        "type": "gasLeak",
+        "eventType": "gasLeak",
         "startedAt": ts(60 * 24 * 70),
         "nodeId": NODE_IDS[2],
         "rawReading": 540.2,
@@ -63,14 +63,14 @@ events = [
 
 def main():
     batch = db.batch()
-    events_ref = db.collection("events")
+    events_ref = db.collection("home_events").document(HID).collection("events")
 
     for event in events:
         doc_ref = events_ref.document()  # auto-generated eid
         batch.set(doc_ref, event)
 
     batch.commit()
-    print(f"Seeded {len(events)} events into 'events' collection for hid={HID}")
+    print(f"Seeded {len(events)} events into home_events/{HID}/events")
 
 
 if __name__ == "__main__":

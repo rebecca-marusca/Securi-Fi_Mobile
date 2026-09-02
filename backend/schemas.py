@@ -46,11 +46,10 @@ class EventType(str, Enum):
     INTRUSION = "intrusion"
     FIRE = "fire"
     GAS_LEAK = "gasLeak"
-    NODE_STATUS = "nodeStatus"
     
 class EventDoc(BaseModel):
     hid: str
-    type: EventType
+    eventType: EventType
     started_at: datetime = Field(alias="startedAt")
     ended_at: Optional[datetime] = Field(None, alias="endedAt")
     dismissed_by_user: Optional[bool] = Field(None, alias="dismissedByUser")

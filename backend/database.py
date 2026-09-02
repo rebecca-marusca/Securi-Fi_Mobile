@@ -151,12 +151,24 @@ def set_node_requested_armed(hid: str, node_id: str, requested_armed: bool):
 # Events
 # ============================================================
 
-def dismiss_event(eid: str, false_alarm_description: Optional[str] = None):
+def dismiss_event(hid: str, eid: str, false_alarm_description: Optional[str] = None):
     update_data = {"dismissedByUser": True}
     if false_alarm_description is not None:
         update_data["falseAlarm"] = false_alarm_description
-    db.collection("events").document(eid).update(update_data)
-    
-def get_event(eid: str) -> Optional[dict]:
-    doc = db.collection("events").document(eid).get()
+    (
+        db.collection("home_events")
+        .document(hid)
+        .collection("events")
+        .document(eid)
+        .update(update_data)
+    )
+
+def get_event(hid: str, eid: str) -> Optional[dict]:
+    doc = (
+        db.collection("home_events")
+        .document(hid)
+        .collection("events")
+        .document(eid)
+        .get()
+    )
     return doc.to_dict() if doc.exists else None

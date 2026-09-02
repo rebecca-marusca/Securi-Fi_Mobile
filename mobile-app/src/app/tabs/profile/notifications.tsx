@@ -62,7 +62,7 @@ export default function NotificationsScreen() {
         <Text style={styles.sectionTitle}>CRITICAL ALERTS</Text>
         <View style={styles.cardGroup}>
           <ToggleRow
-            label="Break-ins"
+            label="Intrusions"
             value={prefs.breakIns}
             onValueChange={(v) => handleToggle("breakIns", v)}
           />

@@ -8,13 +8,12 @@ import type { TimelineEntry } from '@/types/timeline';
 const MOCK_ENTRIES: TimelineEntry[] = [
   {
     id: '1',
-    type: 'break_in',
+    eventType: 'intrusion',
     date: '08.09.2026',
-    title: 'BREAK-IN DETECTED',
+    title: 'INTRUSION DETECTED',
     description:
       'First detection at 10:00 AM. Movement amplifies at 10:02 AM next to Kitchen node, and the system automatically notified all registered users.',
   },
-  { id: '2', type: 'nodes_on', date: '06.10.2026', title: 'NODES TURNED ON' },
 ];
 
 export const TimelineSheet = forwardRef<BottomSheet>((_, ref) => {

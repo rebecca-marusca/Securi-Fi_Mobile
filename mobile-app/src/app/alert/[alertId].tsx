@@ -28,7 +28,7 @@ export default function AlertScreen() {
       
       <View style={styles.content}>
         <View style={styles.headerTextContainer}>
-            <Text style={styles.subtitle}>BREAK-IN DETECTED</Text>
+            <Text style={styles.subtitle}>INTRUSION DETECTED</Text>
         </View>
 
         <RoomNodeMapEmergency

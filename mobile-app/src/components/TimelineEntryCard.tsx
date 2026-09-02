@@ -2,17 +2,15 @@ import { useState } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors } from '@/theme/colors';
-import type { TimelineEntry } from '@/types/timeline';
+import type { TimelineDescriptionLine, TimelineEntry } from '@/types/timeline';
 
 const TRUNCATE_LENGTH = 100;
+const COLLAPSED_LINE_COUNT = 4;
 
-const TITLE_COLORS: Record<TimelineEntry['type'], string> = {
-  break_in: '#9c1818',
+const TITLE_COLORS: Record<TimelineEntry['eventType'], string> = {
+  intrusion: '#9c1818',
   fire: '#EA580C',
   gas_leak: '#D97706',
-  nodes_on: colors.text,
-  nodes_off: colors.text,
-  false_alarm: "#4b5a6e",
 };
 
 type Props = {
@@ -39,18 +37,46 @@ function Chevron({ expanded, color }: { expanded: boolean; color: string }) {
   );
 }
 
+function flattenDescriptionLine(line: TimelineDescriptionLine): string {
+  return line.parts.map((part) => part.text).join('');
+}
+
+function renderDescriptionLine(line: TimelineDescriptionLine, lineIndex: number) {
+  return (
+    <Text key={lineIndex} style={styles.descriptionLine}>
+      {line.parts.map((part, partIndex) => (
+        <Text
+          key={`${lineIndex}-${partIndex}`}
+          style={part.bold ? styles.descriptionStrong : undefined}
+        >
+          {part.text}
+        </Text>
+      ))}
+    </Text>
+  );
+}
+
 export function TimelineEntryCard({ entry, isLast, needsDivider, hideDate }: Props) {
   const [revealed, setRevealed] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
-  const needsTruncation = (entry.description?.length ?? 0) > TRUNCATE_LENGTH;
+  const richDescription = entry.descriptionLines ?? [];
+  const hasRichDescription = richDescription.length > 0;
+  const plainDescription = entry.description ?? richDescription.map(flattenDescriptionLine).join('\n');
+  const needsTruncation = !hasRichDescription && (plainDescription?.length ?? 0) > TRUNCATE_LENGTH;
+  const needsLineTruncation = hasRichDescription && richDescription.length > COLLAPSED_LINE_COUNT;
+  const visibleLines =
+    expanded || !needsLineTruncation
+      ? richDescription
+      : richDescription.slice(0, COLLAPSED_LINE_COUNT);
   const displayText =
-    !entry.description || expanded || !needsTruncation
-      ? entry.description
-      : entry.description.slice(0, TRUNCATE_LENGTH).trimEnd();
+    !plainDescription || expanded || !needsTruncation
+      ? plainDescription
+      : plainDescription.slice(0, TRUNCATE_LENGTH).trimEnd();
 
-  const showDescription = entry.description && revealed;
-  const titleColor = TITLE_COLORS[entry.type];
+  const hasDescription = hasRichDescription || !!plainDescription;
+  const showDescription = hasDescription && revealed;
+  const titleColor = TITLE_COLORS[entry.eventType];
 
   return (
     <View style={styles.wrapper}>
@@ -71,7 +97,7 @@ export function TimelineEntryCard({ entry, isLast, needsDivider, hideDate }: Pro
         </Text>
       ) : null}
 
-      {entry.description ? (
+      {hasDescription ? (
         <Pressable
           style={[styles.titleRow, !showDescription && { marginBottom: 0 }]}
           onPress={() => setRevealed((prev) => !prev)}
@@ -87,15 +113,26 @@ export function TimelineEntryCard({ entry, isLast, needsDivider, hideDate }: Pro
 
       {showDescription && (
         <View style={styles.descriptionCard}>
-          <Text style={styles.descriptionText}>
-            {displayText}
-            {needsTruncation && !expanded && '… '}
-            {needsTruncation && (
-              <Text style={styles.readMore} onPress={() => setExpanded((prev) => !prev)}>
-                {expanded ? ' Show less' : 'Read more'}
-              </Text>
-            )}
-          </Text>
+          {hasRichDescription ? (
+            <>
+              {visibleLines.map(renderDescriptionLine)}
+              {needsLineTruncation && (
+                <Text style={styles.readMore} onPress={() => setExpanded((prev) => !prev)}>
+                  {expanded ? 'Show less' : `Read ${richDescription.length - visibleLines.length} more`}
+                </Text>
+              )}
+            </>
+          ) : (
+            <Text style={styles.descriptionText}>
+              {displayText}
+              {needsTruncation && !expanded && '... '}
+              {needsTruncation && (
+                <Text style={styles.readMore} onPress={() => setExpanded((prev) => !prev)}>
+                  {expanded ? ' Show less' : 'Read more'}
+                </Text>
+              )}
+            </Text>
+          )}
         </View>
       )}
 
@@ -162,6 +199,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.textMuted,
     lineHeight: 20,
+  },
+  descriptionLine: {
+    fontFamily: 'SF-Pro-Text-Regular',
+    fontSize: 14,
+    color: colors.textMuted,
+    lineHeight: 20,
+    marginBottom: 6,
+  },
+  descriptionStrong: {
+    fontFamily: 'SF-Pro-Text-Semibold',
+    color: colors.textMuted,
   },
   readMore: {
     fontFamily: 'SF-Pro-Text-Bold',

@@ -1,17 +1,24 @@
 export type TimelineEntryType =
-  | 'break_in'
-  | 'nodes_on'
-  | 'nodes_off'
-  | 'false_alarm'
+  | 'intrusion'
   | 'fire'
   | 'gas_leak';
 
+export type TimelineDescriptionPart = {
+  text: string;
+  bold?: boolean;
+};
+
+export type TimelineDescriptionLine = {
+  parts: TimelineDescriptionPart[];
+};
+
 export type TimelineEntry = {
   id: string;
-  type: TimelineEntryType;
+  eventType: TimelineEntryType;
   date: string; // display-formatted for now — will derive from a Firestore Timestamp later
   title: string;
   description?: string;
+  descriptionLines?: TimelineDescriptionLine[];
   startTime?: string; // formatted as HH:MM
   endTime?: string; // formatted as HH:MM
   rawStartedAt?: any; // raw timestamp for grouping
