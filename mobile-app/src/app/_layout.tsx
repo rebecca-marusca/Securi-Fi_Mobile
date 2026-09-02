@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { SplashOverlay } from "@/components/splash-overlay";
+import { SplashOverlay } from "@/components/SplashOverlay";
 import { AlertProvider, useActiveAlert } from "@/contexts/AlertContext";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { useRouter, Slot, useSegments } from "expo-router";
