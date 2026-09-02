@@ -69,6 +69,10 @@ def main():
         doc_ref = events_ref.document()  # auto-generated eid
         batch.set(doc_ref, event)
 
+        # If this event is active (no endedAt and not dismissed), pick its ID
+        if not event.get("endedAt") and not event.get("dismissedByUser") and active_eid is None:
+            active_eid = doc_ref.id
+
     batch.commit()
     print(f"Seeded {len(events)} events into home_events/{HID}/events")
 

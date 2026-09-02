@@ -203,7 +203,7 @@ function mapEventToTimelineEntry(
 
   const typeDetails = eventTypeDetails(event.eventType);
   const isFalseAlarm = event.falseAlarm === true || typeof event.falseAlarm === "string";
-  const status = [isFalseAlarm && "False alarm", event.dismissedByUser && "Dismissed"].filter(Boolean).join(", ");
+  const status = [isFalseAlarm && "False alarm"].filter(Boolean).join(", ");
   const descriptionLines: TimelineDescriptionLine[] = [];
 
   if (status) {

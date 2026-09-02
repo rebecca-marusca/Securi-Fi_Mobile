@@ -5,10 +5,20 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import {
+  doc,
+  getFirestore,
+  onSnapshot,
+} from "@react-native-firebase/firestore";
+import { useAuth } from "@/contexts/AuthContext";
+import { subscribeToUserHomeLinks, subscribeToHome } from "@/services/homes";
+import type { SecuriFiEvent } from "@/types/firestore";
 
-type ActiveAlert = {
+export type ActiveAlert = {
   alertId: string;
-  type: "intrusion" | "fire" | "flood";
+  eventType: "intrusion" | "fire" | "gasLeak" | string;
+  hid?: string;
+  event?: SecuriFiEvent | null;
 } | null;
 
 type AlertContextType = {
@@ -22,27 +32,106 @@ const AlertContext = createContext<AlertContextType>({
 });
 
 export function AlertProvider({ children }: { children: ReactNode }) {
+  const { user, isLoading: authLoading } = useAuth();
   const [activeAlert, setActiveAlert] = useState<ActiveAlert>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // TODO: replace with real Firestore/Firebase real-time listener
-    // Example:
-    // const unsubscribe = onSnapshot(activeAlertsQuery, (snapshot) => {
-    //   const alert = snapshot.docs[0];
-    //   setActiveAlert(alert ? { alertId: alert.id, type: alert.data().type } : null);
-    //   setIsLoading(false);
-    // });
-    // return unsubscribe;
+    if (authLoading) return;
 
-    /*//placeholder for now:
-    setActiveAlert({
-      alertId: "test-123",
-    type: "fire", // Change to "intrusion" or "flood" as needed
-    }); */
-    setActiveAlert(null);// No active alert for now
-    setIsLoading(false);
-  }, []);
+    if (!user) {
+      setActiveAlert(null);
+      setIsLoading(false);
+      return;
+    }
+
+    let unsubLinks: (() => void) | null = null;
+    let unsubHome: (() => void) | null = null;
+    let unsubEvent: (() => void) | null = null;
+
+    // 1. Subscribe to user <-> home links to get current home ID
+    unsubLinks = subscribeToUserHomeLinks(user.uid, (links) => {
+      const hid = links[0]?.hid ?? null;
+
+      if (unsubHome) {
+        unsubHome();
+        unsubHome = null;
+      }
+      if (unsubEvent) {
+        unsubEvent();
+        unsubEvent = null;
+      }
+
+      if (!hid) {
+        setActiveAlert(null);
+        setIsLoading(false);
+        return;
+      }
+
+      // 2. Subscribe to home document to watch activeEventId
+      unsubHome = subscribeToHome(hid, (homeData) => {
+        const activeEventId = homeData?.activeEventId;
+
+        // Clean up previous event doc listener if activeEventId changed
+        if (unsubEvent) {
+          unsubEvent();
+          unsubEvent = null;
+        }
+
+        if (!activeEventId) {
+          setActiveAlert(null);
+          setIsLoading(false);
+          return;
+        }
+
+        // 3. Subscribe directly to the single active event document
+        const eventDocRef = doc(getFirestore(), "events", activeEventId);
+        unsubEvent = onSnapshot(
+          eventDocRef,
+          (eventSnap) => {
+            if (!eventSnap.exists()) {
+              setActiveAlert({
+                alertId: activeEventId,
+                eventType: "intrusion",
+                hid,
+              });
+              setIsLoading(false);
+              return;
+            }
+
+            const eventData = eventSnap.data() as any;
+
+            if (eventData?.dismissedByUser || eventData?.endedAt) {
+              setActiveAlert(null);
+            } else {
+              setActiveAlert({
+                alertId: activeEventId,
+                eventType: eventData?.eventType ?? "intrusion",
+                hid,
+                event: { eid: eventSnap.id, ...eventData } as SecuriFiEvent,
+              });
+            }
+            setIsLoading(false);
+          },
+          (error) => {
+            console.error("[AlertContext] Error listening to active event doc:", error);
+            setActiveAlert({
+              alertId: activeEventId,
+              eventType: "intrusion",
+              hid,
+            });
+            setIsLoading(false);
+          }
+        );
+      });
+    });
+
+    return () => {
+      if (unsubLinks) unsubLinks();
+      if (unsubHome) unsubHome();
+      if (unsubEvent) unsubEvent();
+    };
+  }, [user, authLoading]);
 
   return (
     <AlertContext.Provider value={{ activeAlert, isLoading }}>
@@ -52,3 +141,4 @@ export function AlertProvider({ children }: { children: ReactNode }) {
 }
 
 export const useActiveAlert = () => useContext(AlertContext);
+
