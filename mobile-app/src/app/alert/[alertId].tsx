@@ -4,6 +4,7 @@ import {
   Alert,
   Linking,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -303,7 +304,7 @@ export default function AlertScreen() {
   }), [currentAlertId, alertType, event?.startedAt, liveDescriptionLines]);
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container}>
       <AnimatedWaveHeader
         color1={colors.redWave1}
         color2={colors.redWave2}
@@ -360,7 +361,7 @@ export default function AlertScreen() {
 
         <TimelineSheet ref={timelineSheetRef} entry={liveEntry} />
       </View>
-    </View>
+    </ScrollView>
   );
 }
 

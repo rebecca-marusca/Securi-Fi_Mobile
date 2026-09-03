@@ -149,7 +149,7 @@ export const RoomNodeMap: React.FC<RoomNodeMapProps> = ({
   };
 
   const handleNodePress = (node: RoomNodeWithColor) => {
-    if (activeEditMode) return;
+    if (isEmergency || activeEditMode) return;
 
     setSelectedNode({
       id: node.id,
@@ -237,7 +237,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bgSecondary1,
     borderRadius: 20,
     borderWidth: 3,
-    borderColor: colors.noMovement,
+    borderColor: colors.textMuted,
     overflow: 'hidden',
   },
   cardTopRow: {
