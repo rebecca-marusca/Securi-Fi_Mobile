@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet, LayoutChangeEvent, StyleProp, ViewStyle, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
@@ -7,6 +7,7 @@ import { colors } from "@/theme/colors";
 import { RoomNode } from "@/services/userProfile";
 import RoomNodeItem from './RoomNodeItem';
 import { NodeControlSheet, SelectedNodeData } from '../NodeControlSheet';
+import { useHomeCache } from '@/hooks/useHomeCache';
 
 export interface RoomNodeWithColor extends RoomNode {
   color?: string;
@@ -15,6 +16,7 @@ export interface RoomNodeWithColor extends RoomNode {
 
 interface RoomNodeMapProps {
   initialNodes?: RoomNodeWithColor[];
+  hid?: string | null;
   style?: StyleProp<ViewStyle>;
   isEmergency?: boolean;
 }
@@ -23,6 +25,7 @@ const STORAGE_KEY = '@room_nodes_positions_v1';
 
 export const RoomNodeMap: React.FC<RoomNodeMapProps> = ({
   initialNodes = [],
+  hid,
   style,
   isEmergency = false,
 }) => {
@@ -33,8 +36,22 @@ export const RoomNodeMap: React.FC<RoomNodeMapProps> = ({
   
   const [selectedNode, setSelectedNode] = useState<SelectedNodeData | null>(null);
   const sheetRef = useRef<BottomSheetModal>(null);
+  const { cache } = useHomeCache(hid);
 
   const activeEditMode = !isEmergency && editMode;
+
+  const displayNodes = useMemo(() => nodes.map((node) => {
+    const movementPct = cache?.nodeReadings?.[node.id]?.movementPct;
+    let movementColor = colors.noMovement;
+
+    if (movementPct !== undefined && movementPct >= 100 && movementPct <= 140) {
+      movementColor = colors.slightMovement;
+    } else if (movementPct !== undefined && movementPct > 140) {
+      movementColor = colors.redWave1;
+    }
+
+    return { ...node, color: movementColor };
+  }), [cache, nodes]);
 
   // --- 1. LOAD & MERGE POSITIONS (Runs ONCE when initialNodes receives items) ---
   useEffect(() => {
@@ -183,7 +200,7 @@ export const RoomNodeMap: React.FC<RoomNodeMapProps> = ({
 
         <View style={styles.canvas} onLayout={handleCanvasLayout}>
           {canvasSize.width > 0 &&
-            nodes.map((node) => (
+            displayNodes.map((node) => (
               <RoomNodeItem
                 key={node.id}
                 node={node}

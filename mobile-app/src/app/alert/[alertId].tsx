@@ -255,7 +255,9 @@ export default function AlertScreen() {
       setCacheTail([]);
       return;
     }
-    const unsub = subscribeToHomeCache(eventHomeId, setCacheTail);
+    const unsub = subscribeToHomeCache(eventHomeId, (cache) => {
+      setCacheTail(cache?.packages ?? []);
+    });
     return unsub;
   }, [eventHomeId]);
 
@@ -313,7 +315,7 @@ export default function AlertScreen() {
           <Text style={styles.subtitle}>{getAlertTitle(alertType)}</Text>
         </View>
 
-        <RoomNodeMapEmergency initialNodes={emergencyNodes} />
+        <RoomNodeMapEmergency initialNodes={emergencyNodes} hid={eventHomeId} />
 
         <View style={styles.statusPill}>
           <LinearGradient
