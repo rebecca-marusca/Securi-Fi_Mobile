@@ -1,9 +1,6 @@
 import { getAuth } from '@react-native-firebase/auth';
 
-// Swap this for your laptop's actual LAN IP. Only good for local testing —
-// this whole approach gets replaced once the backend is actually deployed
-// somewhere reachable from anywhere (not just your home WiFi).
-export const API_BASE_URL = 'http://192.168.1.10:8000';
+export const API_BASE_URL = 'https://securi-fi-mobile.onrender.com';
 
 export async function apiFetch(path: string, options: RequestInit = {}) {
   const user = getAuth().currentUser;
