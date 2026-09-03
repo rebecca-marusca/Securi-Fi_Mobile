@@ -22,6 +22,13 @@ import { subscribeToNodesForHome, type FirestoreNode } from '@/services/nodes';
 import { colors } from '@/theme/colors';
 import type { SecuriFiEvent } from '@/types/firestore';
 import type { TimelineEntry } from '@/types/timeline';
+import {
+  buildPlayByPlayFromPackages,
+  friendlyWarning,
+} from '@/utils/eventDescriptions';
+import { subscribeToEventChunks } from '@/services/events';
+import { subscribeToHomeCache } from '@/services/cache';
+import type { Chunk, ChunkPackage } from '@/types/firestore';
 
 function formatTimelineDate(timestamp?: any): string {
   if (!timestamp) return "";
@@ -51,7 +58,7 @@ function getAlertTitle(eventType: SecuriFiEvent['eventType']): string {
       return 'GAS LEAK DETECTED';
     case 'intrusion':
     default:
-      return 'BREAK-IN DETECTED';
+      return 'ONGOING INTRUSION';
   }
 }
 
@@ -74,17 +81,26 @@ export default function AlertScreen() {
   const { hid } = useHome();
 
   const currentAlertId = alertId || activeAlert?.alertId;
+  const eventHomeId = activeAlert?.hid ?? hid;
   const [event, setEvent] = useState<SecuriFiEvent | null>(activeAlert?.event ?? null);
   const [dbNodes, setDbNodes] = useState<FirestoreNode[]>([]);
   const [isDismissing, setIsDismissing] = useState(false);
+  const [chunks, setChunks] = useState<Chunk[]>([]);
+  const [cacheTail, setCacheTail] = useState<ChunkPackage[]>([]);
 
   const timelineSheetRef = useRef<BottomSheet>(null);
 
   // 1. Subscribe to active event document in real-time
   useEffect(() => {
-    if (!currentAlertId) return;
+    if (!currentAlertId || !eventHomeId) return;
 
-    const eventDocRef = doc(getFirestore(), 'events', currentAlertId);
+    const eventDocRef = doc(
+      getFirestore(),
+      'home_events',
+      eventHomeId,
+      'events',
+      currentAlertId
+    );
     const unsub = onSnapshot(
       eventDocRef,
       (snap) => {
@@ -96,7 +112,7 @@ export default function AlertScreen() {
     );
 
     return unsub;
-  }, [currentAlertId]);
+  }, [currentAlertId, eventHomeId]);
 
   // 2. Subscribe to home's nodes for real-time nickname and positions
   useEffect(() => {
@@ -225,6 +241,65 @@ export default function AlertScreen() {
     );
   };
 
+  useEffect(() => {
+    if (!currentAlertId || !eventHomeId) {
+      setChunks([]);
+      return;
+    }
+    const unsub = subscribeToEventChunks(eventHomeId, currentAlertId, setChunks);
+    return unsub;
+  }, [currentAlertId, eventHomeId]);
+
+  useEffect(() => {
+    if (!eventHomeId) {
+      setCacheTail([]);
+      return;
+    }
+    const unsub = subscribeToHomeCache(eventHomeId, setCacheTail);
+    return unsub;
+  }, [eventHomeId]);
+
+  // Flushed history + whatever hasn't flushed yet, in one stream
+  const livePackages = useMemo(() => {
+    const flushed = chunks.flatMap((chunk) => chunk.packages ?? []);
+    return [...flushed, ...cacheTail];
+  }, [chunks, cacheTail]);
+
+  const latestPackage = useMemo(() => {
+    if (!livePackages.length) return undefined;
+    return [...livePackages].sort(
+      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    )[0];
+  }, [livePackages]);
+
+  // Status pill: latest package's warning type, falling back to the
+  // static copy until the first package for this event lands
+  const statusText = useMemo(() => {
+    const warning = latestPackage
+      ? friendlyWarning(latestPackage.warningType ?? latestPackage.warning_type)
+      : null;
+    return warning ?? getAlertStatus(alertType, triggeredNodeName);
+  }, [latestPackage, alertType, triggeredNodeName]);
+
+  const liveDescriptionLines = useMemo(
+    () => buildPlayByPlayFromPackages(livePackages, nodeNameMap),
+    [livePackages, nodeNameMap]
+  );
+
+  // Same shape TimelineEntryCard already renders for finished events —
+  // just descriptionLines only, no status/reason lines, since this event
+  // hasn't been dismissed yet.
+  const liveEntry: TimelineEntry = useMemo(() => ({
+    id: currentAlertId ?? 'active-alert',
+    eventType: alertType === 'fire' ? 'fire' : alertType === 'gasLeak' ? 'gas_leak' : 'intrusion',
+    date: formatTimelineDate(event?.startedAt) || 'Today',
+    title: getAlertTitle(alertType),
+    descriptionLines: liveDescriptionLines,
+    startTime: undefined,
+    endTime: undefined,
+    rawStartedAt: event?.startedAt,
+  }), [currentAlertId, alertType, event?.startedAt, liveDescriptionLines]);
+
   return (
     <View style={styles.container}>
       <AnimatedWaveHeader
@@ -238,7 +313,7 @@ export default function AlertScreen() {
           <Text style={styles.subtitle}>{getAlertTitle(alertType)}</Text>
         </View>
 
-        {/*<RoomNodeMapEmergency initialNodes={emergencyNodes} /> */}
+        <RoomNodeMapEmergency initialNodes={emergencyNodes} />
 
         <View style={styles.statusPill}>
           <LinearGradient
@@ -246,8 +321,8 @@ export default function AlertScreen() {
             style={styles.innerShadowGradient}
           />
           <Text style={styles.statusText}>
-            {getAlertStatus(alertType, triggeredNodeName)}
-          </Text>
+            {statusText}
+          </Text> 
         </View>
 
         <Pressable style={styles.buttonE} onPress={handleCallEmergency}>
@@ -281,7 +356,7 @@ export default function AlertScreen() {
           )}
         </Pressable>
 
-        <TimelineSheet ref={timelineSheetRef} entry={timelineEntry} />
+        <TimelineSheet ref={timelineSheetRef} entry={liveEntry} />
       </View>
     </View>
   );
