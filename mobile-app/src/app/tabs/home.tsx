@@ -142,6 +142,7 @@ const HomeScreen: React.FC = () => {
 
         <RoomNodeMapNormal
           initialNodes={formattedNodes}
+          hid={hid}
         />
 
         <View style={styles.statusPill}>

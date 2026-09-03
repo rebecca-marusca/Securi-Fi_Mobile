@@ -1,8 +1,9 @@
 import { doc, getFirestore, onSnapshot } from '@react-native-firebase/firestore';
+import type { Cache } from '@/types/firestore';
 
 export function subscribeToHomeCache(
   hid: string,
-  callback: (packages: import('@/types/firestore').ChunkPackage[]) => void
+  callback: (cache: Cache | null) => void
 ) {
   const firestore = getFirestore();
   const cacheRef = doc(firestore, 'cache', hid);
@@ -10,8 +11,7 @@ export function subscribeToHomeCache(
   return onSnapshot(
     cacheRef,
     (snapshot) => {
-      const data = snapshot.data();
-      callback((data?.packages as any[]) ?? []);
+      callback(snapshot.exists() ? (snapshot.data() as Cache) : null);
     },
     (error) => console.error('[home cache] listener error:', error)
   );
