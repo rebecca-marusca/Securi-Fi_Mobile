@@ -102,7 +102,7 @@ export type ChunkPackage = {
 };
 
 export type ChunkNodeReading = {
-  nodeId: string;
+  nodeId?: string;
   state: string;
   movementPct: number;
   rawMq2Reading: number;
