@@ -3,7 +3,15 @@ from firebase_admin import credentials, firestore
 from datetime import datetime, timezone
 from typing import Optional
 
-cred = credentials.Certificate("serviceAccountKey.json")
+import json
+import os
+
+cred_json = os.environ.get("FIREBASE_CREDENTIALS")
+if cred_json:
+    cred = credentials.Certificate(json.loads(cred_json))
+else:
+    cred = credentials.Certificate("serviceAccountKey.json")
+
 firebase_admin.initialize_app(cred)
 db = firestore.client()
 
