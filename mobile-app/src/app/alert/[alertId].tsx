@@ -201,7 +201,7 @@ export default function AlertScreen() {
 
   const handleDismiss = () => {
     const eid = currentAlertId;
-    if (!eid) return;
+    if (!eid || !eventHomeId) return;
 
     Alert.alert(
       "Dismiss Alert",
@@ -213,7 +213,7 @@ export default function AlertScreen() {
           onPress: async () => {
             try {
               setIsDismissing(true);
-              await dismissEvent(eid, "False alarm");
+              await dismissEvent(eventHomeId, eid, "False alarm");
             } catch (err) {
               console.error("Failed to dismiss event:", err);
               Alert.alert("Error", "Could not dismiss the alert. Please try again.");
@@ -228,7 +228,7 @@ export default function AlertScreen() {
           onPress: async () => {
             try {
               setIsDismissing(true);
-              await dismissEvent(eid);
+              await dismissEvent(eventHomeId, eid);
             } catch (err) {
               console.error("Failed to dismiss event:", err);
               Alert.alert("Error", "Could not dismiss the alert. Please try again.");

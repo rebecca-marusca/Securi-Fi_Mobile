@@ -8,8 +8,12 @@ import {
 import type { Chunk, SecuriFiEvent } from '@/types/firestore';
 import { apiFetch } from '@/services/api';
 
-export async function dismissEvent(eid: string, falseAlarmDescription?: string) {
-  const response = await apiFetch(`/events/${eid}/dismiss`, {
+export async function dismissEvent(
+  hid: string,
+  eid: string,
+  falseAlarmDescription?: string
+) {
+  const response = await apiFetch(`/homes/${hid}/events/${eid}/dismiss`, {
     method: 'POST',
     body: JSON.stringify({ false_alarm: falseAlarmDescription ?? null }),
   });
