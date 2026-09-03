@@ -2,6 +2,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -13,6 +14,8 @@ import {
 } from "@react-native-firebase/firestore";
 import { useAuth } from "@/contexts/AuthContext";
 import { subscribeToUserHomeLinks, subscribeToHome } from "@/services/homes";
+import { showIntrusionNotification } from "@/services/notifications";
+import { useUserProfile } from "@/hooks/useUserProfile";
 import type { SecuriFiEvent } from "@/types/firestore";
 
 export type ActiveAlert = {
@@ -34,8 +37,10 @@ const AlertContext = createContext<AlertContextType>({
 
 export function AlertProvider({ children }: { children: ReactNode }) {
   const { user, isLoading: authLoading } = useAuth();
+  const { profile } = useUserProfile();
   const [activeAlert, setActiveAlert] = useState<ActiveAlert>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const lastNotifiedEventId = useRef<string | null>(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -186,6 +191,21 @@ export function AlertProvider({ children }: { children: ReactNode }) {
       if (unsubOngoingEvents) unsubOngoingEvents();
     };
   }, [user, authLoading]);
+
+  useEffect(() => {
+    if (!activeAlert || activeAlert.eventType !== "intrusion") {
+      lastNotifiedEventId.current = null;
+      return;
+    }
+
+    if (profile?.notificationPrefs?.breakIns === false) return;
+    if (lastNotifiedEventId.current === activeAlert.alertId) return;
+
+    lastNotifiedEventId.current = activeAlert.alertId;
+    void showIntrusionNotification(activeAlert.hid ?? "", activeAlert.alertId).catch(
+      (error) => console.warn("[push] Error showing intrusion notification:", error),
+    );
+  }, [activeAlert, profile?.notificationPrefs?.breakIns]);
 
   return (
     <AlertContext.Provider value={{ activeAlert, isLoading }}>

@@ -8,6 +8,53 @@ import {
 } from '@react-native-firebase/messaging';
 import { apiFetch } from '@/services/api';
 import { PermissionsAndroid, Platform } from 'react-native';
+import * as Notifications from 'expo-notifications';
+
+const INTRUSION_CHANNEL_ID = 'intrusion-alerts';
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowBanner: true,
+    shouldShowList: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
+
+export async function showIntrusionNotification(hid: string, eid: string) {
+  if (Platform.OS !== 'android') return;
+
+  await Notifications.setNotificationChannelAsync(INTRUSION_CHANNEL_ID, {
+    name: 'Intrusion alerts',
+    importance: Notifications.AndroidImportance.MAX,
+    vibrationPattern: [0, 500, 250, 500],
+  });
+
+  const permission = await Notifications.getPermissionsAsync();
+  const finalPermission =
+    permission.status === Notifications.PermissionStatus.GRANTED
+      ? permission
+      : await Notifications.requestPermissionsAsync();
+
+  if (finalPermission.status !== Notifications.PermissionStatus.GRANTED) {
+    console.log('[push] Local notification permission denied');
+    return;
+  }
+
+  await Notifications.scheduleNotificationAsync({
+    content: {
+      title: 'Intrusion detected',
+      body: 'An intrusion is ongoing at your home.',
+      data: { hid, eid, eventType: 'intrusion' },
+    },
+    trigger: {
+      type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+      seconds: 1,
+      repeats: false,
+      channelId: INTRUSION_CHANNEL_ID,
+    },
+  });
+}
 
 export async function registerForPushNotifications() {
   if (Platform.OS === 'ios') {
