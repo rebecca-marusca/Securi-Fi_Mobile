@@ -26,6 +26,24 @@ export function getNodeDisplayName(nodeId?: string, nodeNameMap?: Record<string,
   return nodeNameMap?.[nodeId] || `Node ${nodeId}`;
 }
 
+function getNodeEntries(pkg: CacheEntry): Array<[string, CacheNodeReading]> {
+  const nodes = pkg.nodes as unknown;
+  if (Array.isArray(nodes)) {
+    return nodes
+      .filter((reading): reading is CacheNodeReading & { nodeId: string } =>
+        typeof reading?.nodeId === "string"
+      )
+      .map((reading) => [reading.nodeId, reading]);
+  }
+
+  return Object.entries((nodes ?? {}) as Record<string, CacheNodeReading>).map(
+    ([nodeId, reading]) => {
+      const readingWithId = reading as CacheNodeReading & { nodeId?: string };
+      return [readingWithId.nodeId || nodeId, reading];
+    }
+  );
+}
+
 /**
  * Describes a single node's reading within a CacheEntry.
  * Checks warningType ("fire", "gas_leak") and movementPct.
@@ -66,7 +84,7 @@ export function describePackage(
   const observations: TimelineDescriptionLine["parts"][] = [];
 
   // Surface the most severe warning across all nodes for the timestamp line
-  const allNodes = Object.entries(pkg.nodes ?? {});
+  const allNodes = getNodeEntries(pkg);
   const topWarning = allNodes
     .map(([, r]) => r.warningType)
     .find((w) => w != null) ?? null;
