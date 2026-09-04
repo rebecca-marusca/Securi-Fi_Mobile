@@ -13,11 +13,11 @@ import {
 } from "@react-native-firebase/firestore";
 import { useAuth } from "@/contexts/AuthContext";
 import { subscribeToUserHomeLinks, subscribeToHome } from "@/services/homes";
-import type { SecuriFiEvent } from "@/types/firestore";
+import { type SecuriFiEvent, normaliseEventType } from "@/types/firestore";
 
 export type ActiveAlert = {
   alertId: string;
-  eventType: "intrusion" | "fire" | "gasLeak" | string;
+  eventType: "intrusion" | "fire" | "gas_leak" | string;
   hid?: string;
   event?: SecuriFiEvent | null;
 } | null;
@@ -114,7 +114,7 @@ export function AlertProvider({ children }: { children: ReactNode }) {
                 event
                   ? {
                       alertId: event.eid,
-                      eventType: event.eventType,
+                      eventType: normaliseEventType(event.eventType),
                       hid,
                       event,
                     }
@@ -159,7 +159,7 @@ export function AlertProvider({ children }: { children: ReactNode }) {
             } else {
               setActiveAlert({
                 alertId: activeEventId,
-                eventType: eventData?.eventType ?? "intrusion",
+                eventType: normaliseEventType(eventData?.eventType ?? "intrusion"),
                 hid,
                 event: { eid: eventSnap.id, ...eventData } as SecuriFiEvent,
               });

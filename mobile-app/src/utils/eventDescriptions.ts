@@ -1,5 +1,5 @@
 import type { TimelineDescriptionLine } from "@/types/timeline";
-import type { ChunkPackage } from "@/types/firestore";
+import type { CacheEntry, CacheNodeReading } from "@/types/firestore";
 
 export function formatPackageTime(timestamp?: string): string {
   if (!timestamp) return "Time unavailable";
@@ -26,27 +26,54 @@ export function getNodeDisplayName(nodeId?: string, nodeNameMap?: Record<string,
   return nodeNameMap?.[nodeId] || `Node ${nodeId}`;
 }
 
+/**
+ * Describes a single node's reading within a CacheEntry.
+ * Checks warningType ("fire", "gas_leak") and movementPct.
+ */
 export function describeNodeReading(
-  node: ChunkPackage["nodes"][number],
+  nodeId: string,
+  reading: CacheNodeReading,
   nodeNameMap: Record<string, string>
 ): TimelineDescriptionLine["parts"] | null {
-  const nodeName = getNodeDisplayName(node.nodeId, nodeNameMap);
+  const nodeName = getNodeDisplayName(nodeId, nodeNameMap);
 
-  if (node.sensors?.flame) return [bold(nodeName), text(" detected "), bold("flame or smoke"), text(".\n")];
-  if (node.sensors?.gas) return [bold(nodeName), text(" detected "), bold("gas"), text(".\n")];
-  if (node.isAlarm) return [bold(nodeName), text(" reported an "), bold("alarm"), text(".\n")];
-  if (node.movementPct > 0) {
-    return [bold(nodeName), text(" registered "), bold(`${node.movementPct}%`), text(` movement`), text(".\n")];
+  if (reading.warningType === "fire") {
+    return [bold(nodeName), text(" detected "), bold("flame or smoke"), text(".\n")];
+  }
+  if (reading.warningType === "gas_leak") {
+    return [bold(nodeName), text(" detected "), bold("gas"), text(".\n")];
+  }
+  if (reading.movementPct > 0) {
+    return [
+      bold(nodeName),
+      text(" registered "),
+      bold(`${reading.movementPct}%`),
+      text(` movement`),
+      text(".\n"),
+    ];
   }
   return null;
 }
 
-export function describePackage(pkg: ChunkPackage, nodeNameMap: Record<string, string>): TimelineDescriptionLine {
+/**
+ * Produces a single description line for one CacheEntry (telemetry package).
+ * Iterates nodes as a Record<nodeId, CacheNodeReading>.
+ */
+export function describePackage(
+  pkg: CacheEntry,
+  nodeNameMap: Record<string, string>
+): TimelineDescriptionLine {
   const observations: TimelineDescriptionLine["parts"][] = [];
-  const warning = friendlyWarning(pkg.warningType ?? pkg.warning_type);
 
-  for (const node of pkg.nodes ?? []) {
-    const observation = describeNodeReading(node, nodeNameMap);
+  // Surface the most severe warning across all nodes for the timestamp line
+  const allNodes = Object.entries(pkg.nodes ?? {});
+  const topWarning = allNodes
+    .map(([, r]) => r.warningType)
+    .find((w) => w != null) ?? null;
+  const warningLabel = friendlyWarning(topWarning);
+
+  for (const [nodeId, reading] of allNodes) {
+    const observation = describeNodeReading(nodeId, reading, nodeNameMap);
     if (observation) observations.push(observation);
   }
 
@@ -54,19 +81,24 @@ export function describePackage(pkg: ChunkPackage, nodeNameMap: Record<string, s
     parts: [
       bold(formatPackageTime(pkg.timestamp)),
       text("  "),
-      ...(warning ? [bold(warning), bold(":\n")] : []),
+      ...(warningLabel ? [bold(warningLabel), bold(":\n")] : []),
       ...(observations.length
-        ? observations.flatMap((observation) => [...observation])
+        ? observations.flatMap((obs) => [...obs])
         : [text("Sensors continued monitoring.")]),
     ],
   };
 }
 
-// Sorts and describes a flat list of packages — used by both the
-// finished-event flow (timeline.tsx, packages from chunks) and the
-// live flow (Alert screen, packages from chunks + the unflushed cache tail).
+/**
+ * Sorts and describes a flat list of CacheEntry packages.
+ * Used by both the finished-event flow (timeline.tsx, packages from chunks)
+ * and the live flow (alert screen, packages from chunks + on-demand cache).
+ *
+ * NOTE: In a future update a colleague will replace this with a highlights-only
+ * summary for finished events displayed in the timeline.
+ */
 export function buildPlayByPlayFromPackages(
-  packages: ChunkPackage[],
+  packages: CacheEntry[],
   nodeNameMap: Record<string, string>
 ): TimelineDescriptionLine[] {
   const sorted = [...packages].sort(

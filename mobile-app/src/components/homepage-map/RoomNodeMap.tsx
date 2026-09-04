@@ -7,7 +7,7 @@ import { colors } from "@/theme/colors";
 import { RoomNode } from "@/services/userProfile";
 import RoomNodeItem from './RoomNodeItem';
 import { NodeControlSheet, SelectedNodeData } from '../NodeControlSheet';
-import { useHomeCache } from '@/hooks/useHomeCache';
+import { useLastPackage } from '@/hooks/useHomeCache';
 
 export interface RoomNodeWithColor extends RoomNode {
   color?: string;
@@ -36,12 +36,12 @@ export const RoomNodeMap: React.FC<RoomNodeMapProps> = ({
   
   const [selectedNode, setSelectedNode] = useState<SelectedNodeData | null>(null);
   const sheetRef = useRef<BottomSheetModal>(null);
-  const { cache } = useHomeCache(hid);
+  const { lastPackage } = useLastPackage();
 
   const activeEditMode = !isEmergency && editMode;
 
   const displayNodes = useMemo(() => nodes.map((node) => {
-    const movementPct = cache?.nodeReadings?.[node.id]?.movementPct;
+    const movementPct = lastPackage?.nodes?.[node.id]?.movementPct;
     let movementColor = colors.noMovement;
 
     if (movementPct !== undefined && movementPct >= 100 && movementPct <= 140) {
@@ -51,7 +51,7 @@ export const RoomNodeMap: React.FC<RoomNodeMapProps> = ({
     }
 
     return { ...node, color: movementColor };
-  }), [cache, nodes]);
+  }), [lastPackage, nodes]);
 
   // --- 1. LOAD & MERGE POSITIONS (Runs ONCE when initialNodes receives items) ---
   useEffect(() => {

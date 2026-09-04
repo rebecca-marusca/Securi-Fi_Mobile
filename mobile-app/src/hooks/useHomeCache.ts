@@ -1,26 +1,19 @@
-import { useEffect, useState } from 'react';
-import { subscribeToHomeCache } from '@/services/cache';
-import type { Cache } from '@/types/firestore';
+import { useMemo } from 'react';
+import { useHome } from '@/hooks/useHome';
+import type { CacheEntry } from '@/types/firestore';
 
-export function useHomeCache(hid: string | null | undefined) {
-  const [cache, setCache] = useState<Cache | null>(null);
-  const [isLoading, setIsLoading] = useState(Boolean(hid));
+/**
+ * Returns the most recent CacheEntry written by the server to homes/{hid}.lastPackage.
+ * The server updates this on every telemetry tick, so it is always the latest single
+ * package. For the full in-memory ring buffer, use requestCacheForHome + subscribeToOnDemandCache.
+ */
+export function useLastPackage(): { lastPackage: CacheEntry | null; isLoading: boolean } {
+  const { home, isLoading } = useHome();
 
-  useEffect(() => {
-    if (!hid) {
-      setCache(null);
-      setIsLoading(false);
-      return;
-    }
+  const lastPackage = useMemo<CacheEntry | null>(() => {
+    if (!home?.lastPackage) return null;
+    return home.lastPackage;
+  }, [home?.lastPackage]);
 
-    setIsLoading(true);
-    const unsubscribe = subscribeToHomeCache(hid, (nextCache) => {
-      setCache(nextCache);
-      setIsLoading(false);
-    });
-
-    return unsubscribe;
-  }, [hid]);
-
-  return { cache, isLoading };
+  return { lastPackage, isLoading };
 }

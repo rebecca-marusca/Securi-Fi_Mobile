@@ -20,15 +20,16 @@ import { useHome } from '@/hooks/useHome';
 import { dismissEvent } from '@/services/events';
 import { subscribeToNodesForHome, type FirestoreNode } from '@/services/nodes';
 import { colors } from '@/theme/colors';
-import type { SecuriFiEvent } from '@/types/firestore';
+import { type SecuriFiEvent, normaliseEventType } from '@/types/firestore';
+import type { CacheEntry } from '@/types/firestore';
 import type { TimelineEntry } from '@/types/timeline';
 import {
   buildPlayByPlayFromPackages,
   friendlyWarning,
 } from '@/utils/eventDescriptions';
 import { subscribeToEventChunks } from '@/services/events';
-import { subscribeToHomeCache } from '@/services/cache';
-import type { Chunk, ChunkPackage } from '@/types/firestore';
+import { requestCacheForHome, subscribeToOnDemandCache } from '@/services/cache';
+import type { Chunk } from '@/types/firestore';
 
 function formatTimelineDate(timestamp?: any): string {
   if (!timestamp) return "";
@@ -51,10 +52,10 @@ function formatTimelineDate(timestamp?: any): string {
 }
 
 function getAlertTitle(eventType: SecuriFiEvent['eventType']): string {
-  switch (eventType) {
+  switch (normaliseEventType(eventType)) {
     case 'fire':
       return 'FIRE / SMOKE DETECTED';
-    case 'gasLeak':
+    case 'gas_leak':
       return 'GAS LEAK DETECTED';
     case 'intrusion':
     default:
@@ -63,10 +64,10 @@ function getAlertTitle(eventType: SecuriFiEvent['eventType']): string {
 }
 
 function getAlertStatus(eventType: SecuriFiEvent['eventType'], nodeName?: string): string {
-  switch (eventType) {
+  switch (normaliseEventType(eventType)) {
     case 'fire':
       return nodeName ? `Smoke detected near ${nodeName}` : 'Flame or smoke detected';
-    case 'gasLeak':
+    case 'gas_leak':
       return nodeName ? `Gas concentration near ${nodeName}` : 'Gas concentration threshold exceeded';
     case 'intrusion':
     default:
@@ -86,7 +87,7 @@ export default function AlertScreen() {
   const [dbNodes, setDbNodes] = useState<FirestoreNode[]>([]);
   const [isDismissing, setIsDismissing] = useState(false);
   const [chunks, setChunks] = useState<Chunk[]>([]);
-  const [cacheTail, setCacheTail] = useState<ChunkPackage[]>([]);
+  const [cacheTail, setCacheTail] = useState<CacheEntry[]>([]);
 
   const timelineSheetRef = useRef<BottomSheet>(null);
 
@@ -133,7 +134,10 @@ export default function AlertScreen() {
     return map;
   }, [dbNodes]);
 
-  const triggeredNodeName = event?.nodeId ? nodeNameMap[event.nodeId] : undefined;
+  // nodeId was written on old event documents but is not part of the current EventDoc model.
+  // Access via 'as any' to retain backward-compat with existing Firestore data.
+  const eventNodeId: string | undefined = (event as any)?.nodeId;
+  const triggeredNodeName = eventNodeId ? nodeNameMap[eventNodeId] : undefined;
   const alertType: SecuriFiEvent['eventType'] = event?.eventType ?? 'intrusion';
 
   // 4. Build nodes for the emergency map
@@ -152,7 +156,7 @@ export default function AlertScreen() {
     }
 
     return dbNodes.map((node, index) => {
-      const isTriggered = event?.nodeId === node.nodeId || event?.nodeId === node.id;
+      const isTriggered = eventNodeId === node.nodeId || eventNodeId === node.id;
       const fallbackPos = defaultPositions[index % defaultPositions.length];
       return {
         id: node.nodeId || node.id || `node-${index}`,
@@ -162,7 +166,7 @@ export default function AlertScreen() {
         color: isTriggered ? colors.redWave1 : colors.redWave3,
       };
     });
-  }, [dbNodes, event?.nodeId]);
+  }, [dbNodes, eventNodeId]);
 
   // 5. Build timeline entry for the sheet
   const timelineEntry: TimelineEntry | null = useMemo(() => {
@@ -250,13 +254,23 @@ export default function AlertScreen() {
     return unsub;
   }, [currentAlertId, eventHomeId]);
 
+  // 5. Request a full cache dump from the server and subscribe to the result.
+  //    The server writes its in-memory ring buffer to cache/{hid} when
+  //    homes/{hid}.requestedCache is set to true. We trigger that on mount
+  //    so we capture every second even before event chunks are flushed.
   useEffect(() => {
     if (!eventHomeId) {
       setCacheTail([]);
       return;
     }
-    const unsub = subscribeToHomeCache(eventHomeId, (cache) => {
-      setCacheTail(cache?.packages ?? []);
+
+    // Trigger the dump asynchronously — fire and forget; listener will catch result.
+    requestCacheForHome(eventHomeId).catch((err) =>
+      console.warn('[AlertScreen] requestCacheForHome failed:', err)
+    );
+
+    const unsub = subscribeToOnDemandCache(eventHomeId, (packages) => {
+      setCacheTail(packages ?? []);
     });
     return unsub;
   }, [eventHomeId]);
@@ -274,13 +288,17 @@ export default function AlertScreen() {
     )[0];
   }, [livePackages]);
 
-  // Status pill: latest package's warning type, falling back to the
-  // static copy until the first package for this event lands
+  // Status pill: most severe warningType from the latest package's nodes record,
+  // falling back to the static copy until the first package for this event lands.
   const statusText = useMemo(() => {
-    const warning = latestPackage
-      ? friendlyWarning(latestPackage.warningType ?? latestPackage.warning_type)
-      : null;
-    return warning ?? getAlertStatus(alertType, triggeredNodeName);
+    if (latestPackage) {
+      const topWarning = Object.values(latestPackage.nodes ?? {})
+        .map((r) => r.warningType)
+        .find((w) => w != null) ?? null;
+      const warning = friendlyWarning(topWarning);
+      if (warning) return warning;
+    }
+    return getAlertStatus(alertType, triggeredNodeName);
   }, [latestPackage, alertType, triggeredNodeName]);
 
   const liveDescriptionLines = useMemo(
@@ -293,7 +311,7 @@ export default function AlertScreen() {
   // hasn't been dismissed yet.
   const liveEntry: TimelineEntry = useMemo(() => ({
     id: currentAlertId ?? 'active-alert',
-    eventType: alertType === 'fire' ? 'fire' : alertType === 'gasLeak' ? 'gas_leak' : 'intrusion',
+    eventType: normaliseEventType(alertType),
     date: formatTimelineDate(event?.startedAt) || 'Today',
     title: getAlertTitle(alertType),
     descriptionLines: liveDescriptionLines,

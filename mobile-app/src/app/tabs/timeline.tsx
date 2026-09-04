@@ -4,7 +4,7 @@ import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from "react-nat
 import AnimatedWaveHeader from "@/components/AnimatedWaveHeader";
 import { TimelineEntryCard } from "@/components/TimelineEntryCard";
 import type { TimelineDescriptionLine, TimelineEntry } from "@/types/timeline";
-import type { Chunk, ChunkPackage, SecuriFiEvent } from "@/types/firestore";
+import { type Chunk, type SecuriFiEvent, normaliseEventType } from "@/types/firestore";
 import { useHome } from "@/hooks/useHome";
 import { subscribeToTimeline } from "@/services/events";
 import { subscribeToNodesForHome } from "@/services/nodes";
@@ -117,12 +117,13 @@ function buildPlayByPlay(
 }
 
 function eventTypeDetails(eventType: SecuriFiEvent["eventType"]): Pick<TimelineEntry, "eventType" | "title"> {
-  switch (eventType) {
+  switch (normaliseEventType(eventType)) {
     case "fire":
       return { eventType: "fire", title: "Fire detection" };
-    case "gasLeak":
+    case "gas_leak":
       return { eventType: "gas_leak", title: "Gas leak detection" };
     case "intrusion":
+    default:
       return { eventType: "intrusion", title: "Intrusion" };
   }
 }
@@ -163,7 +164,7 @@ function mapEventToTimelineEntry(
     id: event.eid,
     eventType: typeDetails.eventType,
     date,
-    title: status ? `${typeDetails.title} — ${status}` : typeDetails.title,
+    title: status ? `${typeDetails.title}: ${status}` : typeDetails.title,
     descriptionLines,
     startTime,
     endTime,
