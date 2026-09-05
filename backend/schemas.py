@@ -76,6 +76,8 @@ class NodeResponse(BaseModel):
     role: str
     armed: bool = False
     requested_armed: bool = Field(default=False, alias="requestedArmed")
+    requested_restart: bool = Field(default=False, alias="requestedRestart")
+    requested_shut_down: bool = Field(default=False, alias="requestedShutDown")
     warnings: Optional[NodeWarningsResponse] = None
 
     model_config = ConfigDict(populate_by_name=True)
@@ -86,3 +88,13 @@ class ArmNodeResponse(BaseModel):
     hid: str
     node_id: str
     requested_armed: bool
+
+
+class NodeActionResponse(BaseModel):
+    """Shape returned by POST /nodes/{hid}/{node_id}/restart|shutdown."""
+    hid: str
+    node_id: str
+    requested_restart: Optional[bool] = Field(None, alias="requestedRestart")
+    requested_shut_down: Optional[bool] = Field(None, alias="requestedShutDown")
+
+    model_config = ConfigDict(populate_by_name=True)

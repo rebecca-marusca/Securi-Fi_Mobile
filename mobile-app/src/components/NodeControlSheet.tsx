@@ -4,7 +4,7 @@ import BottomSheet, { BottomSheetBackdrop, BottomSheetModal, BottomSheetView } f
 import { colors } from '@/theme/colors';
 import { LinearGradient } from "expo-linear-gradient";
 import { FinalToggleRow } from "@/components/ToggleRow";
-import { type FirestoreNode, subscribeToNodesForHome, armNode, disarmNode } from "@/services/nodes";
+import { type FirestoreNode, subscribeToNodesForHome, armNode, disarmNode, restartNode, shutdownNode } from "@/services/nodes";
 import { useHome } from "@/hooks/useHome";
 
 export interface SelectedNodeData {
@@ -15,16 +15,15 @@ export interface SelectedNodeData {
 
 interface NodeControlSheetProps {
   selectedNode: SelectedNodeData | null;
-  onRestart?: (nodeId: string) => Promise<void> | void;
-  onShutdown?: (nodeId: string) => Promise<void> | void;
 }
 
 export const NodeControlSheet = forwardRef<BottomSheetModal, NodeControlSheetProps>(
-  ({ selectedNode, onRestart, onShutdown }, ref) => {
+  ({ selectedNode }, ref) => {
     const snapPoints = useMemo(() => ['35%'], []);
     const { home, hid, isLoading } = useHome();
     const [dbNodes, setDbNodes] = useState<FirestoreNode[]>([]);
     const [optimisticArmed, setOptimisticArmed] = useState(false);
+    const [pendingAction, setPendingAction] = useState<'restart' | 'shutdown' | null>(null);
 
     const renderBackdrop = useCallback(
       (props: any) => (
@@ -56,12 +55,23 @@ export const NodeControlSheet = forwardRef<BottomSheetModal, NodeControlSheetPro
 
     if (!selectedNode) return null;
 
-    const handleRestart = () => {
-      if (selectedNode) onRestart?.(selectedNode.id);
-    };
+    const handleNodeAction = async (action: 'restart' | 'shutdown') => {
+      if (!hid || !selectedNode || pendingAction) return;
 
-    const handleShutdown = () => {
-      if (selectedNode) onShutdown?.(selectedNode.id);
+      setPendingAction(action);
+      try {
+        if (action === 'restart') {
+          await restartNode(hid, selectedNode.id);
+        } else {
+          await shutdownNode(hid, selectedNode.id);
+        }
+        Alert.alert('Node Action Requested', `${selectedNode.name} will ${action === 'restart' ? 'restart' : 'shut down'} shortly.`);
+      } catch (err) {
+        console.error(`Failed to request node ${action}:`, err);
+        Alert.alert('Error', `Could not request the node ${action}. Please try again.`);
+      } finally {
+        setPendingAction(null);
+      }
     };
 
     /**
@@ -120,9 +130,10 @@ export const NodeControlSheet = forwardRef<BottomSheetModal, NodeControlSheetPro
                 styles.restartButton,
                 pressed && styles.buttonPressed,
               ]}
-              onPress={handleRestart}
+              onPress={() => handleNodeAction('restart')}
+              disabled={!hid || isLoading || pendingAction !== null}
             >
-              <Text style={styles.restartText}>Restart</Text>
+              <Text style={styles.restartText}>{pendingAction === 'restart' ? 'Restarting…' : 'Restart'}</Text>
             </Pressable>
 
             <Pressable
@@ -131,9 +142,10 @@ export const NodeControlSheet = forwardRef<BottomSheetModal, NodeControlSheetPro
                 styles.shutdownButton,
                 pressed && styles.buttonPressed,
               ]}
-              onPress={handleShutdown}
+              onPress={() => handleNodeAction('shutdown')}
+              disabled={!hid || isLoading || pendingAction !== null}
             >
-              <Text style={styles.shutdownText}>Shut Down</Text>
+              <Text style={styles.shutdownText}>{pendingAction === 'shutdown' ? 'Shutting Down…' : 'Shut Down'}</Text>
             </Pressable>
           </View>
         </BottomSheetView>

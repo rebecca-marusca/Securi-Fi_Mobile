@@ -53,3 +53,19 @@ export async function disarmNode(hid: string, nodeId: string) {
   return response.json();
 }
 
+async function requestNodeAction(hid: string, nodeId: string, action: 'restart' | 'shutdown') {
+  const response = await apiFetch(`/nodes/${hid}/${nodeId}/${action}`, { method: 'POST' });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.detail ?? `Failed to request node ${action}`);
+  }
+  return response.json();
+}
+
+export function restartNode(hid: string, nodeId: string) {
+  return requestNodeAction(hid, nodeId, 'restart');
+}
+
+export function shutdownNode(hid: string, nodeId: string) {
+  return requestNodeAction(hid, nodeId, 'shutdown');
+}

@@ -38,6 +38,10 @@ export type Node = {
 
   armed: boolean;
   requestedArmed: boolean;
+  /** Set to true by the app to request that this node restart. */
+  requestedRestart: boolean;
+  /** Set to true by the app to request that this node shut down. */
+  requestedShutDown: boolean;
 };
 
 export type UserHomeLink = {

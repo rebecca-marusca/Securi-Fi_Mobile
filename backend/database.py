@@ -154,6 +154,20 @@ def set_node_requested_armed(hid: str, node_id: str, requested_armed: bool):
         print(f"[DB] set_node_requested_armed error for {doc_id}: {e}")
 
 
+def set_node_requested_action(hid: str, node_id: str, action: str):
+    """Request a one-time node action for the device to consume."""
+    field = {
+        "restart": "requestedRestart",
+        "shut_down": "requestedShutDown",
+    }[action]
+    doc_id = f"{hid}_{node_id}"
+    try:
+        db.collection("nodes").document(doc_id).update({field: True})
+        print(f"[DB] Node {node_id} {field}=True")
+    except Exception as e:
+        print(f"[DB] set_node_requested_action error for {doc_id}: {e}")
+
+
 
 # ============================================================
 # Events

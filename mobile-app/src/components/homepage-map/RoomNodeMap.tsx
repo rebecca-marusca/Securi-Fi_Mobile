@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { View, Text, Pressable, StyleSheet, LayoutChangeEvent, StyleProp, ViewStyle, Alert } from 'react-native';
+import { View, Text, Pressable, StyleSheet, LayoutChangeEvent, StyleProp, ViewStyle } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 
@@ -168,20 +168,6 @@ export const RoomNodeMap: React.FC<RoomNodeMapProps> = ({
     );
   };
 
-  const handleRestart = (nodeId: string) => {
-    const target = nodes.find((n) => n.id === nodeId);
-    Alert.alert('Node Action', `Restarting ${target?.name || 'node'}...`);
-    sheetRef.current?.dismiss();
-    setSelectedNode(null);
-  };
-
-  const handleShutdown = (nodeId: string) => {
-    const target = nodes.find((n) => n.id === nodeId);
-    Alert.alert('Node Action', `Shutting down ${target?.name || 'node'}...`);
-    sheetRef.current?.dismiss();
-    setSelectedNode(null);
-  };
-
   return (
     <>
       <View style={[styles.card, style]}>
@@ -216,8 +202,6 @@ export const RoomNodeMap: React.FC<RoomNodeMapProps> = ({
       <NodeControlSheet
         ref={sheetRef}
         selectedNode={selectedNode}
-        onRestart={handleRestart}
-        onShutdown={handleShutdown}
       />
     </>
   );

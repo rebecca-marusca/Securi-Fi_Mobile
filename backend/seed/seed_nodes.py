@@ -21,6 +21,8 @@ nodes = [
         },
         "armed": True,
         "requestedArmed": True,   # in sync — settled "armed" state
+        "requestedRestart": False,
+        "requestedShutDown": False,
     },
     {
         "nodeId": NODE_IDS[1],
@@ -34,6 +36,8 @@ nodes = [
         },
         "armed": False,
         "requestedArmed": True,  # mismatch — exercises "Arming…" UI state
+        "requestedRestart": False,
+        "requestedShutDown": False,
     },
     {
         "nodeId": NODE_IDS[2],
@@ -47,6 +51,8 @@ nodes = [
         },
         "armed": False,
         "requestedArmed": False,  # in sync — settled "disarmed" state
+        "requestedRestart": False,
+        "requestedShutDown": False,
     },
 ]
 
