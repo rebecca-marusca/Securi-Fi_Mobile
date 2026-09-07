@@ -47,6 +47,15 @@ export const NodeControlSheet = forwardRef<BottomSheetModal, NodeControlSheetPro
     // Derive the armed state for THIS SPECIFIC node from Firestore
     const currentNode = dbNodes.find((n) => n.id === selectedNode?.id || n.nodeId === selectedNode?.id);
     const derivedRequestedArmed = currentNode?.requestedArmed ?? false;
+    const nodeStatus = useMemo(() => {
+      if (currentNode?.requestedShutDown === true) {
+        return { label: 'Offline', color: colors.intermediate };
+      }
+      if ((currentNode?.movementPct ?? 0) > 0) {
+        return { label: 'Sensing movement', color: colors.slightMovement };
+      }
+      return { label: 'Online', color: colors.noMovement };
+    }, [currentNode?.movementPct, currentNode?.reportType]);
 
     // Reconcile optimisticArmed with the real Firestore value
     useEffect(() => {
@@ -111,6 +120,10 @@ export const NodeControlSheet = forwardRef<BottomSheetModal, NodeControlSheetPro
           {/* Node Information */}
           <View style={styles.header}>
             <Text style={styles.nodeName}>{selectedNode.name}</Text>
+            <View style={styles.statusRow}>
+              <View style={[styles.statusDot, { backgroundColor: nodeStatus.color }]} />
+              <Text style={styles.nodeStatusText}>{nodeStatus.label}</Text>
+            </View>
             <View>
               
               <FinalToggleRow
@@ -178,6 +191,21 @@ const styles = StyleSheet.create({
     color: colors.accent,
     marginBottom: 10,
   },
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  nodeStatusText: {
+    color: colors.textMuted,
+    fontFamily: 'SF-Pro-Text-Semibold',
+    fontSize: 14,
+  },
   statusBadge: {
     paddingVertical: 6,
     paddingHorizontal: 20,
@@ -193,7 +221,7 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: 'SF-Pro-Text-Semibold',
     color: colors.base,
   },
   actionRow: {
@@ -216,7 +244,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.textMuted,
   },
   shutdownButton: {
-    backgroundColor: colors.redWave1,
+    backgroundColor: "#903131",
   },
   restartText: {
     fontSize: 15,
