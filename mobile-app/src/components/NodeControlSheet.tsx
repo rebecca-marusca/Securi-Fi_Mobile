@@ -171,17 +171,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     borderRadius: 12,
   },
-  statusArmed: {
-    backgroundColor: colors.noMovement,
-  },
-  statusDisarmed: {
-    backgroundColor: colors.redWave2,
-    borderWidth: 1,
-    borderColor: colors.redWave1,
-  },
   statusText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: "SF-Pro-Text-Regular",
     color: colors.base,
   },
   actionRow: {
@@ -204,7 +196,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.textMuted,
   },
   shutdownButton: {
-    backgroundColor: colors.redWave1,
+    backgroundColor: colors.alertRed,
   },
   restartText: {
     fontSize: 15,

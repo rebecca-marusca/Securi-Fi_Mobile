@@ -1,13 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  Linking,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Alert, Linking, Pressable, StyleSheet, Text, View, TextInput, Modal } from 'react-native';
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { LinearGradient } from 'expo-linear-gradient';
 import BottomSheet from "@gorhom/bottom-sheet";
@@ -22,13 +14,11 @@ import { subscribeToNodesForHome, type FirestoreNode } from '@/services/nodes';
 import { colors } from '@/theme/colors';
 import type { SecuriFiEvent } from '@/types/firestore';
 import type { TimelineEntry } from '@/types/timeline';
-import {
-  buildPlayByPlayFromPackages,
-  friendlyWarning,
-} from '@/utils/eventDescriptions';
+import { buildPlayByPlayFromPackages, friendlyWarning } from '@/utils/eventDescriptions';
 import { subscribeToEventChunks } from '@/services/events';
 import { subscribeToHomeCache } from '@/services/cache';
 import type { Chunk, ChunkPackage } from '@/types/firestore';
+import { SymbolView } from 'expo-symbols';
 
 function formatTimelineDate(timestamp?: any): string {
   if (!timestamp) return "";
@@ -48,6 +38,30 @@ function formatTimelineDate(timestamp?: any): string {
   const mm = String(date.getMonth() + 1).padStart(2, "0");
   const yyyy = date.getFullYear();
   return `${dd}.${mm}.${yyyy}`;
+}
+
+function formatTimelineTime(timestamp?: any): string {
+
+  if (!timestamp) return "";
+  let date: Date;
+
+  if (typeof timestamp?.toDate === "function") {
+    date = timestamp.toDate();
+  } else if (typeof timestamp?.seconds === "number") {
+    date = new Date(timestamp.seconds * 1000);
+  } else if (timestamp instanceof Date) {
+    date = timestamp;
+  } else {
+    date = new Date(timestamp);
+  }
+
+  if (isNaN(date.getTime())) return "";
+
+  return date.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
 }
 
 function getAlertTitle(eventType: SecuriFiEvent['eventType']): string {
@@ -87,6 +101,8 @@ export default function AlertScreen() {
   const [isDismissing, setIsDismissing] = useState(false);
   const [chunks, setChunks] = useState<Chunk[]>([]);
   const [cacheTail, setCacheTail] = useState<ChunkPackage[]>([]);
+  const [showFalseAlarmModal, setShowFalseAlarmModal] = useState(false);
+  const [falseAlarmDescription, setFalseAlarmDescription] = useState("");
 
   const timelineSheetRef = useRef<BottomSheet>(null);
 
@@ -147,7 +163,7 @@ export default function AlertScreen() {
     if (dbNodes.length === 0) {
       return defaultPositions.map((node) => ({
         ...node,
-        color: colors.redWave3,
+        color: colors.alertRed,
       }));
     }
 
@@ -159,7 +175,7 @@ export default function AlertScreen() {
         name: node.nickname || `Node ${index + 1}`,
         x: fallbackPos.x,
         y: fallbackPos.y,
-        color: isTriggered ? colors.redWave1 : colors.redWave3,
+        color: isTriggered ? colors.alertRed : "#a9a7a7",
       };
     });
   }, [dbNodes, event?.nodeId]);
@@ -201,45 +217,57 @@ export default function AlertScreen() {
 
   const handleDismiss = () => {
     const eid = currentAlertId;
+
     if (!eid) return;
 
     Alert.alert(
       "Dismiss Alert",
-      "Has this situation been resolved or was it a false alarm?",
+      "Is this event a false alarm?",
       [
         { text: "Cancel", style: "cancel" },
         {
           text: "False Alarm",
-          onPress: async () => {
-            try {
-              setIsDismissing(true);
-              await dismissEvent(eid, "False alarm");
-            } catch (err) {
-              console.error("Failed to dismiss event:", err);
-              Alert.alert("Error", "Could not dismiss the alert. Please try again.");
-            } finally {
-              setIsDismissing(false);
-            }
-          },
-        },
-        {
-          text: "Resolved",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              setIsDismissing(true);
-              await dismissEvent(eid);
-            } catch (err) {
-              console.error("Failed to dismiss event:", err);
-              Alert.alert("Error", "Could not dismiss the alert. Please try again.");
-            } finally {
-              setIsDismissing(false);
-            }
+          style: 'destructive',
+          onPress: () => {
+            setFalseAlarmDescription(""); 
+            setShowFalseAlarmModal(true);
           },
         },
       ]
     );
   };
+
+  const handleFalseAlarmSubmit = async () => {
+    const eid = currentAlertId;
+
+    if(!eid) return;
+
+    const description = falseAlarmDescription.trim();
+
+    if(!description) {
+      Alert.alert(
+        "Description required",
+        "Please explain why this was a false alarm."
+      );
+      return;
+    }
+
+    try {
+      setIsDismissing(true);
+      setShowFalseAlarmModal(false);
+
+      await dismissEvent(eid, description);
+    } catch (err) {
+        console.error("Failed to dismiss event:", err);
+
+        Alert.alert(
+          "Error",
+          "Could not dismiss the alert. Please try again."
+        );
+    } finally {
+      setIsDismissing(false);
+    }
+  }
 
   useEffect(() => {
     if (!currentAlertId || !eventHomeId) {
@@ -310,38 +338,52 @@ export default function AlertScreen() {
 
       <View style={styles.content}>
         <View style={styles.headerTextContainer}>
-          <Text style={styles.subtitle}>{getAlertTitle(alertType)}</Text>
+          <Text style={styles.subtitle}>{getAlertTitle(alertType)}</Text>  
         </View>
 
         <RoomNodeMapEmergency initialNodes={emergencyNodes} />
 
-        <View style={styles.statusPill}>
-          <LinearGradient
-            colors={["rgba(33, 2, 2, 0.25)", "transparent"]}
-            style={styles.innerShadowGradient}
-          />
-          <Text style={styles.statusText}>
-            {statusText}
-          </Text> 
-        </View>
+        <Pressable
+          style={styles.activityCard}
+          onPress={() => timelineSheetRef.current?.expand()}
+          accessibilityRole="button"
+          accessibilityLabel="View live alert activity"
+        >
+          <View style={styles.activityIndicatorColumn}>
+            <View style={styles.liveDot} />
+          </View>
 
-        <Pressable style={styles.buttonE} onPress={handleCallEmergency}>
-          <LinearGradient
-            colors={["rgba(33, 2, 2, 0.25)", "transparent"]}
-            style={styles.innerShadowGradient}
+          <View style={styles.activityTextContainer}>
+            <View style={styles.activityTitleRow}>
+              <Text style={styles.activityTitle}>Alert Activity</Text>
+              <Text style={styles.activityLiveText}>LIVE</Text>
+            </View>
+
+            <Text style={styles.activityDescription} numberOfLines={1}>
+              {latestPackage
+                ? `${statusText} • ${formatTimelineTime(latestPackage.timestamp)}`
+                : "Waiting for real-time events..."}
+            </Text>
+          </View>
+
+          <SymbolView
+            name="chevron.right"
+            size={16}
+            tintColor={colors.text}
           />
-          <Text style={styles.buttonText}>CALL EMERGENCY</Text>
         </Pressable>
 
-        <Pressable
-          style={styles.buttonT}
-          onPress={() => timelineSheetRef.current?.expand()}
-        >
-          <LinearGradient
-            colors={["rgba(2, 33, 23, 0.25)", "transparent"]}
-            style={styles.innerShadowGradient}
-          />
-          <Text style={styles.buttonText}>TIMELINE</Text>
+        <Pressable style={styles.buttonEmergency} onPress={handleCallEmergency}>
+
+          <View style={styles.emergencyButtonContent}>
+            <SymbolView
+              name="phone.fill"
+              size={20}
+              tintColor= {colors.base}
+            />
+            <Text style={styles.emergencyText}>Emergency Call</Text>
+          </View>
+
         </Pressable>
 
         <Pressable
@@ -350,13 +392,57 @@ export default function AlertScreen() {
           disabled={isDismissing}
         >
           {isDismissing ? (
-            <ActivityIndicator size="small" color={colors.redWave1} />
+            <ActivityIndicator size="small" color={colors.alertRed} />
           ) : (
             <Text style={styles.buttonDismissText}>False alarm? Dismiss</Text>
           )}
         </Pressable>
 
-        <TimelineSheet ref={timelineSheetRef} entry={liveEntry} />
+        <Modal 
+          visible={showFalseAlarmModal} 
+          transparent animationType="fade" 
+          onRequestClose={() => setShowFalseAlarmModal(false)}
+        > 
+          <View style={styles.modalOverlay}> 
+            <View style={styles.modalContainer}> 
+              <Text style={styles.modalTitle}>False Alarm Description</Text>
+              
+              <Text style={styles.modalDescription}>Why was this a false alarm?</Text> 
+              
+              <TextInput 
+                value={falseAlarmDescription} 
+                onChangeText={setFalseAlarmDescription} 
+                placeholder="Enter a reason..." 
+                placeholderTextColor="#888" 
+                multiline textAlignVertical="top" 
+                style={styles.descriptionInput} 
+                maxLength={500} 
+              /> 
+              
+              <View style={styles.modalButtons}>
+                <Pressable 
+                  onPress={() => setShowFalseAlarmModal(false)}
+                  style={styles.modalCancelButton}
+                > 
+                  <Text style={styles.modalCancelText}>Cancel</Text>
+                </Pressable> 
+                
+                <Pressable 
+                  onPress={handleFalseAlarmSubmit}
+                  disabled={isDismissing} 
+                  style={styles.modalSubmitButton} 
+                > 
+                  {isDismissing ? (
+                    <ActivityIndicator size="small" color={colors.base} /> 
+                  ) : ( 
+                    <Text style={styles.modalSubmitText}>Submit</Text>
+                  )}
+                  </Pressable> 
+                </View> 
+              </View> 
+            </View> 
+          </Modal>
+
       </View>
     </View>
   );
@@ -374,43 +460,47 @@ const styles = StyleSheet.create({
   },
   headerTextContainer: {
     alignItems: 'center',
-    marginBottom: 30,
+    marginBottom: 24,
   },
   subtitle: {
-    fontSize: 27,
+    fontSize: 30,
     fontFamily: "SF-Pro-Text-Bold",
-    color: colors.redWave1,
-    marginTop: 35,
+    color: colors.redWave3,
+    marginTop: 24,
     textAlign: "center",
   },
-  statusPill: {
-    backgroundColor: colors.redWave1,
-    paddingVertical: 10,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    marginTop: -3,
-    overflow: 'hidden',
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
-  buttonE: {
-    backgroundColor: colors.redWave1,
-    width: 320,
-    height: 60,
-    borderRadius: 1000,
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  buttonEmergency: {
+    backgroundColor: colors.alertRed,
+    width: "65%",
+    height: 50,
+    borderRadius: 100,
     marginTop: 24,
     justifyContent: "center",
     overflow: 'hidden',
   },
-  buttonT: {
-    backgroundColor: colors.textMuted,
-    width: 320,
+  buttonLive: {
+    backgroundColor: colors.base,
+    borderColor: colors.accent,
+    borderWidth: 1,
+    width: 130,
     height: 50,
-    borderRadius: 1000,
-    marginTop: 12,
+    borderRadius: 15,
+    marginTop: 36,
     justifyContent: "center",
     overflow: 'hidden',
   },
   buttonD: {
-    marginTop: 24,
+    marginTop: 20,
     paddingVertical: 8,
     alignSelf: 'center',
   },
@@ -418,25 +508,155 @@ const styles = StyleSheet.create({
     color: colors.text,
     textDecorationLine: 'underline',
     alignSelf: "center",
-    fontFamily: "SF-Pro-Text-Bold",
+    fontFamily: "SF-Pro-Text-Medium",
     fontSize: 13,
   },
-  buttonText: {
+  emergencyButtonContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  liveFeedButtonContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emergencyText: {
     color: colors.base,
     alignSelf: "center",
     fontFamily: "SF-Pro-Text-Bold",
+    paddingLeft: 7,
+    paddingRight: 7,
+    fontSize: 20,
+  },
+  liveFeedText: {
+    color: colors.accent,
+    alignSelf: "center",
+    fontFamily: "SF-Pro-Text-Bold",
     fontSize: 15,
+    paddingLeft: 5,
+    paddingRight: 2
   },
   statusText: {
-    color: colors.base,
+    color: colors.redWave3,
     fontFamily: "SF-Pro-Text-Semibold",
     fontSize: 15,
   },
-  innerShadowGradient: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 10,
+  modalOverlay: { 
+    flex: 1, 
+    backgroundColor: 'rgba(0, 0, 0, 0.6)', 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    paddingHorizontal: 24, 
+  }, 
+  modalContainer: { 
+    width: '100%', 
+    backgroundColor: colors.base, 
+    borderRadius: 20, 
+    padding: 24, 
+  }, 
+  modalTitle: { 
+    fontFamily: "SF-Pro-Text-Bold", 
+    fontSize: 22, 
+    color: colors.text, 
+    marginBottom: 8, 
+  }, 
+  modalDescription: { 
+    fontFamily: "SF-Pro-Text-Regular", 
+    fontSize: 15, 
+    color: colors.text, 
+    opacity: 0.7, 
+    marginBottom: 16, 
+  }, 
+  descriptionInput: { 
+    minHeight: 110, 
+    borderWidth: 1, 
+    borderColor: colors.intermediate, 
+    borderRadius: 12, 
+    padding: 14, 
+    fontFamily: "SF-Pro-Text-Regular", 
+    fontSize: 15, 
+    color: colors.text, 
+    backgroundColor: 'rgba(255, 255, 255, 0.05)', 
+  }, 
+  modalButtons: { 
+    flexDirection: 'row', 
+    justifyContent: 'flex-end', 
+    alignItems: 'center', 
+    marginTop: 20, 
+    gap: 12, 
+  }, 
+  modalCancelButton: { 
+    paddingVertical: 12, 
+    paddingHorizontal: 18, 
+  }, 
+  modalCancelText: { 
+    fontFamily: "SF-Pro-Text-Semibold", 
+    fontSize: 15, 
+    color: colors.text, 
+  }, 
+  modalSubmitButton: { 
+    backgroundColor: colors.textMuted, 
+    paddingVertical: 12, 
+    paddingHorizontal: 20, 
+    borderRadius: 12, 
+    minWidth: 80, 
+    alignItems: 'center', 
+  }, 
+  modalSubmitText: { 
+    fontFamily: "SF-Pro-Text-Bold", 
+    fontSize: 15, 
+    color: colors.base, 
+  },
+  activityCard: {
+    width: "90%",
+    minHeight: 68,
+    marginTop: 24,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "rgba(50, 50, 50, 0.28)",
+    backgroundColor: "rgba(255, 255, 255, 0.22)",
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  activityIndicatorColumn: {
+    width: 24,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  liveDot: {
+    width: 9,
+    height: 9,
+    borderRadius: 5,
+    backgroundColor: colors.alertRed,
+  },
+  activityTextContainer: {
+    flex: 1,
+    marginHorizontal: 10,
+  },
+  activityTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  activityTitle: {
+    color: colors.text,
+    fontFamily: "SF-Pro-Text-Bold",
+    fontSize: 16,
+  },
+  activityLiveText: {
+    color: colors.alertRed,
+    fontFamily: "SF-Pro-Text-Bold",
+    fontSize: 11,
+    letterSpacing: 0.8,
+  },
+  activityDescription: {
+    color: colors.text,
+    opacity: 0.68,
+    fontFamily: "SF-Pro-Text-Regular",
+    fontSize: 12,
+    marginTop: 3,
   },
 });

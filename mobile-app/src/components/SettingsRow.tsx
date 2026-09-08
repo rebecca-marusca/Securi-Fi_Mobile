@@ -18,8 +18,8 @@ export function SettingsRow({
   showChevron = true,
   isDestructive = false,
 }: SettingsRowProps) {
-  const iconColor = isDestructive ? colors.redWave1 ?? "#E57373" : colors.accent;
-  const textColor = isDestructive ? colors.redWave1 ?? "#E57373" : colors.text;
+  const iconColor = isDestructive ? colors.alertRed ?? "#E57373" : colors.accent;
+  const textColor = isDestructive ? colors.alertRed ?? "#E57373" : colors.text;
 
   return (
     <TouchableOpacity style={styles.row} onPress={onPress} activeOpacity={0.7}>
