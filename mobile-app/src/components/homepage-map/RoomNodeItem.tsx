@@ -179,8 +179,8 @@ const styles = StyleSheet.create({
   },
   nodeLabel: {
     fontSize: 12,
-    fontWeight: '600',
-    color: colors.textMuted,
+    fontFamily: "SF-Pro-Text-Medium",
+    color: colors.text,
     textAlign: 'center',
   },
 });

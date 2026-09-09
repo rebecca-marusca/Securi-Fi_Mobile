@@ -218,10 +218,11 @@ export const RoomNodeMapEmergency: React.FC<Omit<RoomNodeMapProps, 'isEmergency'
 const styles = StyleSheet.create({
   card: {
     width: '100%',
-    backgroundColor: colors.bgSecondary1,
+    backgroundColor: colors.base,
+    //backgroundColor: "rgba(255, 255, 255, 0.22)",
     borderRadius: 20,
-    borderWidth: 3,
-    borderColor: colors.noMovement,
+    borderWidth: 1.5,
+    borderColor: colors.greyBg,
     overflow: 'hidden',
   },
   cardTopRow: {
@@ -240,7 +241,7 @@ const styles = StyleSheet.create({
   },
   editBtnText: {
     color: colors.accent,
-    fontWeight: '700',
+    fontFamily: "SF-Pro-Text-Semibold",
     fontSize: 13,
   },
   editBtnTextActive: {

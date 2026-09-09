@@ -172,6 +172,6 @@ logoutButton: {
   logoutText: {
     fontFamily: "SF-Pro-Text-Semibold",
     fontSize: 15,
-    color: colors.redWave1 ?? "#E57373",
+    color: colors.alertRed
   },
 });
