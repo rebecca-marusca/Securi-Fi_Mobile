@@ -8,7 +8,7 @@ import { type Chunk, type SecuriFiEvent, normaliseEventType } from "@/types/fire
 import { useHome } from "@/hooks/useHome";
 import { subscribeToTimeline } from "@/services/events";
 import { subscribeToNodesForHome } from "@/services/nodes";
-import { bold, buildPlayByPlayFromPackages, text } from "@/utils/eventDescriptions";
+import { bold, buildPlayByPlayFromPackages, formatPackageTime, text } from "@/utils/eventDescriptions";
 
 function formatTimelineDate(timestamp?: any): string {
   if (!timestamp) return "";
@@ -108,12 +108,17 @@ function getRelativeDateLabel(timestamp?: any): string {
 
 type TimelineEvent = SecuriFiEvent & { chunks: Chunk[] };
 
-function buildPlayByPlay(
-  event: TimelineEvent,
-  nodeNameMap: Record<string, string>
-): TimelineDescriptionLine[] {
+function buildSummaryLines(event: TimelineEvent, nodeNameMap: Record<string, string>): TimelineDescriptionLine[] {
+  if (event.summary?.length) {
+    return event.summary.map((entry) => ({
+      parts: [bold(formatPackageTime(entry.timestamp)), text("  "), text(entry.description)],
+    }));
+  }
+
   const packages = event.chunks.flatMap((chunk) => chunk.packages ?? []);
-  return buildPlayByPlayFromPackages(packages, nodeNameMap);
+  return packages.length
+    ? buildPlayByPlayFromPackages(packages, nodeNameMap)
+    : [{ parts: [text("No activity was recorded for this event.")] }];
 }
 
 function eventTypeDetails(eventType: SecuriFiEvent["eventType"]): Pick<TimelineEntry, "eventType" | "title"> {
@@ -147,9 +152,12 @@ function mapEventToTimelineEntry(
     });
   }
 
-  if (typeof event.falseAlarm === "string" && event.falseAlarm.trim()) {
+  const falseAlarmReason = typeof event.falseAlarm === "string"
+    ? event.falseAlarm
+    : event.falseAlarmDescription;
+  if (falseAlarmReason?.trim()) {
     descriptionLines.push({
-      parts: [bold("Reason: "), text(event.falseAlarm.trim())],
+      parts: [bold("Reason: "), text(falseAlarmReason.trim())],
     });
   } else if (isFalseAlarm) {
     descriptionLines.push({
@@ -158,7 +166,7 @@ function mapEventToTimelineEntry(
   }
 
   //descriptionLines.push({ parts: [bold("Play-by-play")] });
-  descriptionLines.push(...buildPlayByPlay(event, nodeNameMap));
+  descriptionLines.push(...buildSummaryLines(event, nodeNameMap));
 
   return {
     id: event.eid,

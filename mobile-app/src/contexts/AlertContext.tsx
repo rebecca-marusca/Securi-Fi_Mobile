@@ -14,6 +14,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { subscribeToUserHomeLinks, subscribeToHome } from "@/services/homes";
 import { type SecuriFiEvent, normaliseEventType } from "@/types/firestore";
+import { timestampToMillis } from "@/utils/eventDescriptions";
 
 export type ActiveAlert = {
   alertId: string;
@@ -107,7 +108,7 @@ export function AlertProvider({ children }: { children: ReactNode }) {
                   ...eventDoc.data(),
                 }) as SecuriFiEvent)
                 .filter((event) => !event.endedAt && !event.dismissedByUser)
-                .sort((a, b) => b.startedAt.toMillis() - a.startedAt.toMillis());
+                .sort((a, b) => timestampToMillis(b.startedAt) - timestampToMillis(a.startedAt));
 
               const event = ongoingEvents[0];
               setActiveAlert(

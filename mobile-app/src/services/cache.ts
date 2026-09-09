@@ -1,44 +1,38 @@
-import {
-  doc,
-  getFirestore,
-  onSnapshot,
-  updateDoc,
-} from '@react-native-firebase/firestore';
-import type { CacheDoc, CacheEntry } from '@/types/firestore';
+import { doc, getDoc, getFirestore, onSnapshot, updateDoc } from '@react-native-firebase/firestore';
+import type { CacheEntry } from '@/types/firestore';
 
-/**
- * Requests the server to flush its in-memory cache to cache/{hid}.
- * The server watches homes/{hid}.requestedCache and writes the full
- * 60-entry ring buffer when it is set to true, then resets it to false.
- */
-export async function requestCacheForHome(hid: string): Promise<void> {
+// One-time: ask the server to dump its in-memory cache into Firestore,
+// then read it once to seed the local rolling window. Only needed when
+// there's an active event and you don't already have a live window going.
+export async function bootstrapLiveCache(hid: string): Promise<CacheEntry[]> {
   const firestore = getFirestore();
-  const homeRef = doc(firestore, 'homes', hid);
-  await updateDoc(homeRef, { requestedCache: true });
+  await updateDoc(doc(firestore, 'homes', hid), { requestedCache: true });
+
+  // Server clears requestedCache back to false once it's dumped — poll
+  // briefly for that, since there's no other completion signal.
+  const cacheRef = doc(firestore, 'cache', hid);
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const snap = await getDoc(cacheRef);
+    const data = snap.data();
+    if (data?.packages) return data.packages as CacheEntry[];
+    await new Promise((r) => setTimeout(r, 200));
+  }
+  return [];
 }
 
-/**
- * Subscribes to the on-demand cache document at cache/{hid}.
- * Call requestCacheForHome(hid) first to trigger the server dump.
- * Returns null until the server has written the document.
- */
-export function subscribeToOnDemandCache(
+// Ongoing: listen only to the home doc's lastPackage field — cheap,
+// fires once per real package instead of re-reading the whole array.
+export function subscribeToLastPackage(
   hid: string,
-  callback: (packages: CacheEntry[] | null) => void
+  callback: (pkg: CacheEntry) => void
 ) {
   const firestore = getFirestore();
-  const cacheRef = doc(firestore, 'cache', hid);
-
   return onSnapshot(
-    cacheRef,
-    (snapshot) => {
-      if (!snapshot.exists()) {
-        callback(null);
-        return;
-      }
-      const data = snapshot.data() as CacheDoc;
-      callback(data.packages ?? null);
+    doc(firestore, 'homes', hid),
+    (snap) => {
+      const lastPackage = snap.data()?.lastPackage;
+      if (lastPackage) callback(lastPackage as CacheEntry);
     },
-    (error) => console.error('[cache] listener error:', error)
+    (error) => console.error('[last package] listener error:', error)
   );
 }

@@ -48,8 +48,14 @@ export const NodeControlSheet = forwardRef<BottomSheetModal, NodeControlSheetPro
     const currentNode = dbNodes.find((n) => n.id === selectedNode?.id || n.nodeId === selectedNode?.id);
     const derivedRequestedArmed = currentNode?.requestedArmed ?? false;
     const nodeStatus = useMemo(() => {
-      if (currentNode?.requestedShutDown === true) {
+      if (currentNode?.reportType === "not_transmitting") {
         return { label: 'Offline', color: colors.intermediate };
+      }
+      if (currentNode?.reportType === "low_battery") {
+        return { label: 'Low battery', color: colors.slightMovement };
+      }
+      if (currentNode?.reportType === "signal_weak") {
+        return { label: 'Weak signal', color: colors.slightMovement };
       }
       if ((currentNode?.movementPct ?? 0) > 0) {
         return { label: 'Sensing movement', color: colors.slightMovement };

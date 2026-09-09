@@ -231,7 +231,7 @@ const styles = StyleSheet.create({
     left: 12,
   },
   editBtn: {
-    backgroundColor: colors.base,
+    backgroundColor: colors.bgSecondary1,
     paddingHorizontal: 19,
     paddingVertical: 6,
     borderRadius: 14,

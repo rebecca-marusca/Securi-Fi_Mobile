@@ -15,11 +15,11 @@ import { colors } from '@/theme/colors';
 import { type SecuriFiEvent, normaliseEventType } from '@/types/firestore';
 import type { CacheEntry } from '@/types/firestore';
 import type { TimelineEntry } from '@/types/timeline';
-import { buildPlayByPlayFromPackages, friendlyWarning } from '@/utils/eventDescriptions';
+import { buildPlayByPlayFromPackages, friendlyWarning, timestampToMillis } from '@/utils/eventDescriptions';
 import { subscribeToEventChunks } from '@/services/events';
 import type { Chunk } from '@/types/firestore';
 import { SymbolView } from 'expo-symbols';
-import { requestCacheForHome, subscribeToOnDemandCache } from '@/services/cache';
+import { bootstrapLiveCache, subscribeToLastPackage } from '@/services/cache';
 
 type ChunkPackage = NonNullable<Chunk['packages']>[number];
 
@@ -106,8 +106,6 @@ export default function AlertScreen() {
   const [cacheTail, setCacheTail] = useState<ChunkPackage[]>([]);
   const [showFalseAlarmModal, setShowFalseAlarmModal] = useState(false);
   const [falseAlarmDescription, setFalseAlarmDescription] = useState("");
-
-  const timelineSheetRef = useRef<BottomSheet>(null);
 
   // 1. Subscribe to active event document in real-time
   useEffect(() => {
@@ -262,7 +260,8 @@ export default function AlertScreen() {
       setIsDismissing(true);
       setShowFalseAlarmModal(false);
 
-      await dismissEvent(eid, description);
+      if (!eventHomeId) return;
+      await dismissEvent(eventHomeId, eid, description);
     } catch (err) {
         console.error("Failed to dismiss event:", err);
 
@@ -284,25 +283,29 @@ export default function AlertScreen() {
     return unsub;
   }, [currentAlertId, eventHomeId]);
 
-  // 5. Request a full cache dump from the server and subscribe to the result.
-  //    The server writes its in-memory ring buffer to cache/{hid} when
-  //    homes/{hid}.requestedCache is set to true. We trigger that on mount
-  //    so we capture every second even before event chunks are flushed.
+  // Seed the live window from the cache, then append each new package.
   useEffect(() => {
     if (!eventHomeId) {
       setCacheTail([]);
       return;
     }
 
-    // Trigger the dump asynchronously — fire and forget; listener will catch result.
-    requestCacheForHome(eventHomeId).catch((err) =>
-      console.warn('[AlertScreen] requestCacheForHome failed:', err)
-    );
+    let isMounted = true;
+    bootstrapLiveCache(eventHomeId)
+      .then((packages) => {
+        if (isMounted) setCacheTail(packages);
+      })
+      .catch((err: unknown) => {
+        console.warn('[AlertScreen] bootstrapLiveCache failed:', err);
+      });
 
-    const unsub = subscribeToOnDemandCache(eventHomeId, (packages) => {
-      setCacheTail(packages ?? []);
+    const unsub = subscribeToLastPackage(eventHomeId, (pkg) => {
+      setCacheTail((previous) => [...previous, pkg]);
     });
-    return unsub;
+    return () => {
+      isMounted = false;
+      unsub();
+    };
   }, [eventHomeId]);
 
   // Flushed history + whatever hasn't flushed yet, in one stream
@@ -314,7 +317,7 @@ export default function AlertScreen() {
   const latestPackage = useMemo(() => {
     if (!livePackages.length) return undefined;
     return [...livePackages].sort(
-      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      (a, b) => timestampToMillis(b.timestamp) - timestampToMillis(a.timestamp)
     )[0];
   }, [livePackages]);
 
@@ -367,7 +370,14 @@ export default function AlertScreen() {
 
         <Pressable
           style={styles.activityCard}
-          onPress={() => timelineSheetRef.current?.expand()}
+          onPress={() => {
+            if (currentAlertId) {
+              router.push({
+                pathname: "/alert/[alertId]/liveFeed",
+                params: { alertId: currentAlertId },
+              });
+            }
+          }}
           accessibilityRole="button"
           accessibilityLabel="View live alert activity"
         >
@@ -487,7 +497,7 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 30,
     fontFamily: "SF-Pro-Text-Bold",
-    color: colors.redWave3,
+    color: colors.alertRed,
     marginTop: 24,
     textAlign: "center",
   },
