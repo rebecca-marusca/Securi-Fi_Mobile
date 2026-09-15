@@ -242,7 +242,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.textMuted,
   },
   shutdownButton: {
-    backgroundColor: colors.alertRed,
+    backgroundColor: colors.redWave3,
   },
   restartText: {
     fontSize: 15,

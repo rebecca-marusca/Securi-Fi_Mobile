@@ -16,13 +16,17 @@ export function subscribeToUserHomeLinks(
 
 export function subscribeToHome(
   hid: string,
-  onChange: (home: (Home & { hid: string }) | null) => void
+  onChange: (home: (Home & { hid: string }) | null) => void,
+  onError?: (error: any) => void
 ) {
   const ref = doc(getFirestore(), 'homes', hid);
   return onSnapshot(
     ref,
     (snap) => onChange(snap.exists() ? { hid: snap.id, ...(snap.data() as Home) } : null),
-    (error) => console.error('subscribeToHome error:', error)
+    (error) => {
+      console.error('subscribeToHome error:', error);
+      if (onError) onError(error);
+    }
   );
 }
 

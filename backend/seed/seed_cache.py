@@ -1,86 +1,95 @@
 """
-seed_cache.py — creates/overwrites the live cache doc at cache/{HID},
-matching the Cache/CacheReading types (overallReading + per-node nodeReadings).
+seed_cache.py — creates/overwrites the live cache doc at cache/{HID}.
 
-This is the doc your Home screen reads for live sensor state — separate
-from the events/nodes seed data, and meant to be re-run any time you want
-to simulate a new "tick" of incoming telemetry.
+Matches Cache (types/firestore.ts) / what dump_cache_to_firestore actually
+writes: just {packages: [CacheEntry], updatedAt} — no more alarmCount,
+idleStreak, isAlarm, or nodeReadings at the top level; those were dropped
+when Stefan moved to the in-memory cache + requestedCache/lastPackage flow.
+
+Each CacheEntry.nodes is a MAP keyed by nodeId (not an array), matching
+CacheNodeReadingDoc's flattened, no-nested-sensors shape.
 
 Usage:
     pip install firebase-admin --break-system-packages
     python seed_cache.py
 """
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from seed_config import db, HID, NODE_IDS
 
 now = datetime.now(timezone.utc)
 
-node_readings = {
-    # node_1 — master, calm/idle reading
-    NODE_IDS[0]: {
-        "nodeId": NODE_IDS[0],
-        "state": "idle",
-        "rawMq2Reading": 120,
+
+def ts(seconds_ago: int) -> datetime:
+    return now - timedelta(seconds=seconds_ago)
+
+
+def make_package(seconds_ago: int, package_pct: int, is_alarm: bool, node_overrides: dict) -> dict:
+    """node_overrides: {node_id: {field: value, ...}} — merged over calm defaults."""
+    defaults = {
+        "batteryPct": 90,
+        "reportType": None,
+        "sensorReading": 120,
         "movementPct": 2,
-        "isAlarm": False,
-        "sensors": {
-            "flame": False,
-            "gas": False,
-            "batteryPct": 92,
+        "warningType": None,
+    }
+
+    nodes = {}
+    for node_id in NODE_IDS:
+        reading = dict(defaults)
+        reading.update(node_overrides.get(node_id, {}))
+        nodes[node_id] = reading
+
+    return {
+        "packagePct": package_pct,
+        "isAlarm": is_alarm,
+        "timestamp": ts(seconds_ago),
+        "nodes": nodes,
+    }
+
+
+# A rolling window telling a small story: calm, then a movement spike near
+# the end — gives the live feed / Alert screen something to actually render.
+packages = [
+    make_package(9, 3, False, {}),
+    make_package(8, 4, False, {}),
+    make_package(7, 5, False, {NODE_IDS[1]: {"batteryPct": 41}}),
+    make_package(6, 6, False, {NODE_IDS[1]: {"batteryPct": 41}}),
+    make_package(5, 8, False, {NODE_IDS[1]: {"batteryPct": 41}}),
+    make_package(
+        4, 152, True,
+        {
+            NODE_IDS[0]: {"movementPct": 160},
+            NODE_IDS[1]: {"movementPct": 145, "batteryPct": 41},
         },
-    },
-    # node_2 — slightly elevated movement, still not a threat
-    NODE_IDS[1]: {
-        "nodeId": NODE_IDS[1],
-        "state": "active",
-        "rawMq2Reading": 165,
-        "movementPct": 28,
-        "isAlarm": False,
-        "sensors": {
-            "flame": False,
-            "gas": False,
-            "batteryPct": 41,   # matches lowBattery=True in seed_nodes.py
+    ),
+    make_package(
+        3, 168, True,
+        {
+            NODE_IDS[0]: {"movementPct": 175},
+            NODE_IDS[1]: {"movementPct": 160, "batteryPct": 41},
         },
-    },
-    # node_3 — high reading, gas sensor tripped (pairs with the active
-    # gasLeak event in seed_events.py for a consistent live+timeline story)
-    NODE_IDS[2]: {
-        "nodeId": NODE_IDS[2],
-        "state": "alert",
-        "rawMq2Reading": 612,
-        "movementPct": 5,
-        "isAlarm": True,
-        "sensors": {
-            "flame": False,
-            "gas": True,
-            "batteryPct": 77,
+    ),
+    make_package(
+        2, 90, True,
+        {
+            NODE_IDS[2]: {"warningType": "gas_leak", "sensorReading": 612, "movementPct": 5},
         },
-    },
-}
+    ),
+    make_package(1, 40, False, {NODE_IDS[1]: {"batteryPct": 41}}),
+    make_package(0, 6, False, {NODE_IDS[1]: {"batteryPct": 41}}),
+]
 
 cache = {
-    "packages": [
-        {
-            "timestamp": now.isoformat(),
-            "warningType": None,
-            "isAlarm": False,
-            "packageMovementPct": 12,
-            "nodes": list(node_readings.values()),
-        }
-    ],
-    "alarmCount": 0,
-    "idleStreak": 10,
-    "isAlarm": False,
-    "nodeReadings": node_readings,
+    "packages": packages,
     "updatedAt": now,
 }
 
 
 def main():
     db.collection("cache").document(HID).set(cache)
-    print(f"Seeded cache doc for hid={HID}")
+    print(f"Seeded cache doc for hid={HID} ({len(packages)} packages)")
 
 
 if __name__ == "__main__":

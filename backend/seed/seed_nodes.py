@@ -1,6 +1,11 @@
 """
 seed_nodes.py — pushes fake node docs into Firestore (nodes/{hid}_{nodeId}).
 
+Matches NodeDoc (models.py): hid, nodeId, nickname, role, batteryPct,
+reportType, sensorReading, movementPct, warningType, armed, requestedArmed
+(+ requestedRestart / requestedShutDown, which are only ever cleared to
+False server-side in what we've seen so far — included here as False).
+
 Usage:
     pip install firebase-admin --break-system-packages
     python seed_nodes.py
@@ -14,13 +19,13 @@ nodes = [
         "hid": HID,
         "nickname": "Living Room",
         "role": "master",
-        "warnings": {
-            "lowBattery": False,
-            "notTransmitting": False,
-            "signalWeak": False,
-        },
+        "batteryPct": 92,
+        "reportType": None,
+        "sensorReading": 118,
+        "movementPct": 2,
+        "warningType": None,
         "armed": True,
-        "requestedArmed": True,   # in sync — settled "armed" state
+        "requestedArmed": True,     # in sync — settled "armed" state
         "requestedRestart": False,
         "requestedShutDown": False,
     },
@@ -29,13 +34,13 @@ nodes = [
         "hid": HID,
         "nickname": "Front Door",
         "role": "slave",
-        "warnings": {
-            "lowBattery": True,   # exercise the low-battery warning UI
-            "notTransmitting": False,
-            "signalWeak": False,
-        },
+        "batteryPct": 41,
+        "reportType": "low_battery",   # exercises the low-battery status branch
+        "sensorReading": 165,
+        "movementPct": 28,
+        "warningType": None,
         "armed": False,
-        "requestedArmed": True,  # mismatch — exercises "Arming…" UI state
+        "requestedArmed": True,     # mismatch — exercises the "Arming…" UI state
         "requestedRestart": False,
         "requestedShutDown": False,
     },
@@ -44,13 +49,13 @@ nodes = [
         "hid": HID,
         "nickname": "Kitchen",
         "role": "slave",
-        "warnings": {
-            "lowBattery": False,
-            "notTransmitting": False,
-            "signalWeak": True,   # exercise the weak-signal warning UI
-        },
+        "batteryPct": 77,
+        "reportType": None,
+        "sensorReading": 612,
+        "movementPct": 5,
+        "warningType": "gas_leak",     # exercises the hazard-warning status branch
         "armed": False,
-        "requestedArmed": False,  # in sync — settled "disarmed" state
+        "requestedArmed": False,    # in sync — settled "disarmed" state
         "requestedRestart": False,
         "requestedShutDown": False,
     },

@@ -174,16 +174,28 @@ def set_node_requested_action(hid: str, node_id: str, action: str):
 # ============================================================
 
 def dismiss_event(hid: str, eid: str, false_alarm_description: Optional[str] = None):
-    update_data = {"dismissedByUser": True}
-    if false_alarm_description is not None:
-        update_data["falseAlarm"] = false_alarm_description
-    (
+    event_ref = (
         db.collection("home_events")
         .document(hid)
         .collection("events")
         .document(eid)
-        .update(update_data)
     )
+    home_ref = db.collection("homes").document(hid)
+    transaction = db.transaction()
+
+    @firestore.transactional
+    def update_dismissed_event(transaction):
+        home_snapshot = home_ref.get(transaction=transaction)
+        update_data = {"dismissedByUser": True}
+        if false_alarm_description is not None:
+            update_data["falseAlarm"] = True
+            update_data["falseAlarmDescription"] = false_alarm_description
+
+        transaction.update(event_ref, update_data)
+        if home_snapshot.exists and home_snapshot.to_dict().get("activeEventId") == eid:
+            transaction.update(home_ref, {"activeEventId": None})
+
+    update_dismissed_event(transaction)
 
 def get_event(hid: str, eid: str) -> Optional[dict]:
     doc = (

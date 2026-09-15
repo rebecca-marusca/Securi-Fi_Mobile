@@ -124,8 +124,8 @@ export default function NodesScreen() {
                 <View key={nodeKey} style={styles.nodeCard}>
                   <View style={styles.cardHeader}>
                     <Text style={styles.inputLabel}>Name</Text>
-                    {node.role ? (
-                      <Text style={styles.roleTag}>{node.role}</Text>
+                    {node.role?.toLowerCase() === "master" ? (
+                      <Text style={styles.roleTag}>main</Text>
                     ) : null}
                   </View>
 

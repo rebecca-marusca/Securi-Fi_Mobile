@@ -153,51 +153,7 @@ export default function AlertScreen() {
   // nodeId was written on old event documents but is not part of the current EventDoc model.
   // Access via 'as any' to retain backward-compat with existing Firestore data.
   const eventNodeId: string | undefined = (event as any)?.nodeId;
-  const triggeredNodeName = eventNodeId ? nodeNameMap[eventNodeId] : undefined;
   const alertType: SecuriFiEvent['eventType'] = event?.eventType ?? 'intrusion';
-
-  // 4. Build nodes for the emergency map
-  const emergencyNodes = useMemo(() => {
-    const defaultPositions = [
-      { id: 'kitchen', name: 'Kitchen', x: 0.28, y: 0.45 },
-      { id: 'living-room', name: 'Living room', x: 0.72, y: 0.28 },
-      { id: 'bedroom', name: 'Bedroom', x: 0.58, y: 0.75 },
-    ];
-
-    if (dbNodes.length === 0) {
-      return defaultPositions.map((node) => ({
-        ...node,
-        color: colors.alertRed,
-      }));
-    }
-
-    return dbNodes.map((node, index) => {
-      const isTriggered = eventNodeId === node.nodeId || eventNodeId === node.id;
-      const fallbackPos = defaultPositions[index % defaultPositions.length];
-      return {
-        id: node.nodeId || node.id || `node-${index}`,
-        name: node.nickname || `Node ${index + 1}`,
-        x: fallbackPos.x,
-        y: fallbackPos.y,
-        color: isTriggered ? colors.alertRed : "#a9a7a7",
-      };
-    });
-  }, [dbNodes, eventNodeId]);
-
-  // 5. Build timeline entry for the sheet
-  const timelineEntry: TimelineEntry | null = useMemo(() => {
-    if (!event && !currentAlertId) return null;
-    const date = formatTimelineDate(event?.startedAt);
-    const title = getAlertTitle(alertType);
-    const location = triggeredNodeName ? ` near ${triggeredNodeName}` : '';
-    return {
-      id: event?.eid ?? currentAlertId ?? 'active-alert',
-      eventType: alertType === 'fire' ? 'fire' : alertType === 'gasLeak' ? 'gas_leak' : 'intrusion',
-      date: date || 'Today',
-      title,
-      description: `Emergency alert triggered${location}. All linked users have been notified.`,
-    };
-  }, [event, currentAlertId, alertType, triggeredNodeName]);
 
   // --- HANDLERS ---
   const handleCallEmergency = () => {
@@ -314,6 +270,71 @@ export default function AlertScreen() {
     return [...flushed, ...cacheTail];
   }, [chunks, cacheTail]);
 
+  // Determine which node triggered the emergency (from event doc, telemetry packages, or master node fallback)
+  const triggeredNodeId = useMemo(() => {
+    if (eventNodeId) return eventNodeId;
+    for (const pkg of livePackages) {
+      for (const [nodeId, reading] of Object.entries(pkg.nodes ?? {})) {
+        if (reading.warningType != null || (reading.movementPct ?? 0) >= 100) {
+          return nodeId;
+        }
+      }
+    }
+    const masterNode = dbNodes.find((n) => n.role === 'master');
+    return masterNode?.nodeId || masterNode?.id || dbNodes[0]?.nodeId || dbNodes[0]?.id;
+  }, [eventNodeId, livePackages, dbNodes]);
+
+  const triggeredNodeName = triggeredNodeId ? nodeNameMap[triggeredNodeId] : undefined;
+
+  // Build nodes for the emergency map
+  const emergencyNodes = useMemo(() => {
+    const defaultPositions = [
+      { id: 'kitchen', name: 'Kitchen', x: 0.28, y: 0.45 },
+      { id: 'living-room', name: 'Living room', x: 0.72, y: 0.28 },
+      { id: 'bedroom', name: 'Bedroom', x: 0.58, y: 0.75 },
+    ];
+
+    if (dbNodes.length === 0) {
+      return defaultPositions.map((node) => ({
+        ...node,
+        color: colors.alertRed,
+        isInactive: false,
+      }));
+    }
+
+    return dbNodes.map((node, index) => {
+      const nodeId = node.nodeId || node.id;
+      const isTriggered = triggeredNodeId
+        ? (nodeId === triggeredNodeId)
+        : (node.role === 'master' || index === 0);
+
+      const fallbackPos = defaultPositions[index % defaultPositions.length];
+      return {
+        id: nodeId || `node-${index}`,
+        name: node.nickname || `Node ${index + 1}`,
+        x: fallbackPos.x,
+        y: fallbackPos.y,
+        color: isTriggered ? colors.alertRed : "#a9a7a7",
+        isInactive: !isTriggered,
+      };
+    });
+  }, [dbNodes, triggeredNodeId]);
+
+  // Build timeline entry for the sheet
+  const timelineEntry: TimelineEntry | null = useMemo(() => {
+    if (!event && !currentAlertId) return null;
+    const date = formatTimelineDate(event?.startedAt);
+    const title = getAlertTitle(alertType);
+    const location = triggeredNodeName ? ` near ${triggeredNodeName}` : '';
+    return {
+      id: event?.eid ?? currentAlertId ?? 'active-alert',
+      eventType: normaliseEventType(alertType),
+      date: date || 'Today',
+      title,
+      description: `Emergency alert triggered${location}. All linked users have been notified.`,
+    };
+  }, [event, currentAlertId, alertType, triggeredNodeName]);
+
   const latestPackage = useMemo(() => {
     if (!livePackages.length) return undefined;
     return [...livePackages].sort(
@@ -387,7 +408,7 @@ export default function AlertScreen() {
 
           <View style={styles.activityTextContainer}>
             <View style={styles.activityTitleRow}>
-              <Text style={styles.activityTitle}>Alert Activity</Text>
+              <Text style={styles.activityTitle}>Activity Monitor</Text>
               <Text style={styles.activityLiveText}>LIVE</Text>
             </View>
 
@@ -670,7 +691,7 @@ const styles = StyleSheet.create({
   },
   activityTitleRow: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "baseline",
     gap: 8,
   },
   activityTitle: {

@@ -12,6 +12,7 @@ import { useLastPackage } from '@/hooks/useHomeCache';
 export interface RoomNodeWithColor extends RoomNode {
   color?: string;
   isArmed?: boolean;
+  isInactive?: boolean;
 }
 
 interface RoomNodeMapProps {
@@ -40,18 +41,22 @@ export const RoomNodeMap: React.FC<RoomNodeMapProps> = ({
 
   const activeEditMode = !isEmergency && editMode;
 
-  const displayNodes = useMemo(() => nodes.map((node) => {
-    const movementPct = lastPackage?.nodes?.[node.id]?.movementPct;
-    let movementColor = colors.noMovement;
+  const displayNodes = useMemo(() => {
+    if (isEmergency) return nodes;
 
-    if (movementPct !== undefined && movementPct >= 100 && movementPct <= 140) {
-      movementColor = colors.slightMovement;
-    } else if (movementPct !== undefined && movementPct > 140) {
-      movementColor = colors.redWave1;
-    }
+    return nodes.map((node) => {
+      const movementPct = lastPackage?.nodes?.[node.id]?.movementPct;
+      let movementColor = colors.noMovement;
 
-    return { ...node, color: movementColor };
-  }), [lastPackage, nodes]);
+      if (movementPct !== undefined && movementPct >= 100 && movementPct <= 140) {
+        movementColor = colors.slightMovement;
+      } else if (movementPct !== undefined && movementPct > 140) {
+        movementColor = colors.redWave1;
+      }
+
+      return { ...node, color: movementColor };
+    });
+  }, [lastPackage, nodes, isEmergency]);
 
   // --- 1. LOAD & MERGE POSITIONS (Runs ONCE when initialNodes receives items) ---
   useEffect(() => {

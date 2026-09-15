@@ -11,7 +11,7 @@ export const colors = {
   greenWave2: "#2D5A4C",
   greenWave1: "#1E4438",
   alertRed: "#E50000",
-  slightMovement: "#f8b04b",
+  slightMovement: "#dd9f49",
   noMovement:  'rgb(64, 144, 79)',
   intermediate: "#707070",
   redWave1: "#6B1111",

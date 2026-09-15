@@ -33,11 +33,38 @@ export function useHome() {
 
   useEffect(() => {
     if (!hid) return;
-    const unsubscribe = subscribeToHome(hid, (homeData) => {
-      setHome(homeData);
-      setIsLoading(false);
-    });
-    return unsubscribe;
+    const activeHid = hid;
+    let timer: any = null;
+    let unsub: (() => void) | null = null;
+
+    function startSubscription() {
+      unsub = subscribeToHome(
+        activeHid,
+        (homeData) => {
+          setHome(homeData);
+          setIsLoading(false);
+        },
+        (error) => {
+          // If permission-denied right after pairing, retry once after a short delay for Firestore rule propagation
+          if (error?.code === 'firestore/permission-denied') {
+            timer = setTimeout(() => {
+              if (unsub) unsub();
+              unsub = subscribeToHome(activeHid, (homeData) => {
+                setHome(homeData);
+                setIsLoading(false);
+              });
+            }, 1500);
+          }
+        }
+      );
+    }
+
+    startSubscription();
+
+    return () => {
+      if (timer) clearTimeout(timer);
+      if (unsub) unsub();
+    };
   }, [hid]);
 
   return { home, hid, isLoading, isPaired: hid !== null };

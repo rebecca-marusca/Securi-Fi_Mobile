@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { StyleSheet, ScrollView, Text, View } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
+import { ScreenHeader } from '@/components/ScreenHeader';
 import { useActiveAlert } from '@/contexts/AlertContext';
 import { useHome } from '@/hooks/useHome';
 import { subscribeToNodesForHome, type FirestoreNode } from '@/services/nodes';
@@ -9,11 +10,8 @@ import { bootstrapLiveCache, subscribeToLastPackage } from '@/services/cache';
 import { buildPlayByPlayFromPackages } from '@/utils/eventDescriptions';
 import type { Chunk, CacheEntry } from '@/types/firestore';
 import { colors } from '@/theme/colors';
-import AnimatedWaveHeader from '@/components/AnimatedWaveHeader';
-import { SymbolView } from 'expo-symbols';
 
 export default function LiveFeedScreen() {
-  const router = useRouter();
   const { alertId } = useLocalSearchParams<{ alertId: string }>();
   const { activeAlert } = useActiveAlert();
   const { hid } = useHome();
@@ -75,29 +73,22 @@ export default function LiveFeedScreen() {
   }, [chunks, rollingWindow]);
 
   const descriptionLines = useMemo(
-    () => buildPlayByPlayFromPackages(allPackages, nodeNameMap),
+    () => buildPlayByPlayFromPackages(allPackages, nodeNameMap).reverse(),
     [allPackages, nodeNameMap]
   );
 
   return (
-    <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <AnimatedWaveHeader 
-          color1={ colors.redWave1 }
-          color2={ colors.redWave2 }
-          color3={ colors.redWave3 }
-        />
-        <View style={styles.header}>
-          <Pressable
-            style={styles.backButton}
-            onPress={() => router.back()}
-            accessibilityRole="button"
-            accessibilityLabel="Back to alert"
-          >
-            <SymbolView name="chevron.left" size={24} tintColor={colors.text} />
-          </Pressable>
-          <Text style={styles.title}>Live Feed</Text>
-        </View>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+    >
+      <ScreenHeader
+        title="Activity Monitor"
+        titleColor={colors.redWave3}
+        iconColor={colors.redWave3}
+      />
+
+      <View style={styles.section}>
         {descriptionLines.map((line, i) => (
           <Text key={i} style={styles.line}>
             {line.parts.map((part, j) =>
@@ -109,25 +100,33 @@ export default function LiveFeedScreen() {
             )}
           </Text>
         ))}
-      </ScrollView>
-    </View>
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.base },
-  header: { paddingTop: 145, paddingBottom: 12, alignItems: "center" },
-  backButton: {
-    position: "absolute",
-    left: 0,
-    top: 141,
-    width: 44,
-    height: 44,
-    alignItems: "center",
-    justifyContent: "center",
+  container: {
+    flex: 1,
+    backgroundColor: colors.base,
   },
-  title: { fontFamily: 'SF-Pro-Text-Bold', fontSize: 30, color: colors.redWave3 },
-  content: { paddingHorizontal: 20, paddingBottom: 40 },
-  line: { marginTop: 10, fontFamily: 'SF-Pro-Text-Regular', fontSize: 14, color: colors.text, marginBottom: 10, lineHeight: 20 },
-  bold: { fontFamily: 'SF-Pro-Text-Bold' },
+  content: {
+    alignContent: "center",
+    paddingHorizontal: 20,
+    paddingTop: 60,
+    paddingBottom: 40,
+  },
+  section: {
+    marginTop: 8,
+  },
+  line: {
+    fontFamily: 'SF-Pro-Text-Regular',
+    fontSize: 14,
+    color: colors.text,
+    marginBottom: 12,
+    lineHeight: 20,
+  },
+  bold: {
+    fontFamily: 'SF-Pro-Text-Bold',
+  },
 });

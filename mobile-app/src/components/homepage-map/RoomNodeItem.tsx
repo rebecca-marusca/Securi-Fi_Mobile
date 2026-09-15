@@ -31,9 +31,16 @@ const RoomNodeItem: React.FC<RoomNodeItemProps> = ({
   propsRef.current = { node, canvasSize, editMode, onNodePress, onNodeMove };
   const initialPos = useRef({ x: node.x, y: node.y });
 
+  const isInactive = node.isInactive === true;
+
   const pulseAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    if (isInactive) {
+      pulseAnim.setValue(0);
+      return;
+    }
+
     const pulseLoop = Animated.loop(
       Animated.timing(pulseAnim, {
         toValue: 1,
@@ -44,7 +51,7 @@ const RoomNodeItem: React.FC<RoomNodeItemProps> = ({
     );
     pulseLoop.start();
     return () => pulseLoop.stop();
-  }, [pulseAnim]);
+  }, [pulseAnim, isInactive]);
 
   const pulseScale = pulseAnim.interpolate({
     inputRange: [0, 1],
@@ -100,20 +107,22 @@ const RoomNodeItem: React.FC<RoomNodeItemProps> = ({
 
   return (
     <View style={[styles.nodeWrapper, { left, top }]}>
-      {/* Pulsing Wave Circle */}
-      <Animated.View
-        pointerEvents="none"
-        style={[
-          styles.rangeCircle,
-          {
-            transform: [{ scale: pulseScale }],
-            opacity: pulseOpacity,
-            backgroundColor: activeColor,
-            borderColor: activeColor,
-            borderWidth: 3,
-          },
-        ]}
-      />
+      {/* Pulsing Wave Circle - only rendered if active */}
+      {!isInactive && (
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.rangeCircle,
+            {
+              transform: [{ scale: pulseScale }],
+              opacity: pulseOpacity,
+              backgroundColor: activeColor,
+              borderColor: activeColor,
+              borderWidth: 3,
+            },
+          ]}
+        />
+      )}
 
       {/* Main Node Circle */}
       <View

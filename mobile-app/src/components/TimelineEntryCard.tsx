@@ -199,6 +199,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.textMuted,
     lineHeight: 20,
+    alignSelf: "center"
   },
   descriptionLine: {
     fontFamily: 'SF-Pro-Text-Regular',

@@ -88,16 +88,11 @@ const HomeScreen: React.FC = () => {
   // It only turns OFF (false) when ALL nodes are disarmed.
   const derivedRequestedArmed = anyArmed;
 
-  const toggleLabel = allArmed
-    ? "All Armed"
-    : anyArmed
-    ? "Partially Armed"
-    : "All Disarmed";
-
   // Optimistic local toggle state — reflects tap immediately, reconciles with
   // Firestore listener once nodes update. Rolls back on request failure.
   const [optimisticArmed, setOptimisticArmed] = useState(false);
 
+  const toggleLabel = "Arm System"
   useEffect(() => {
     setOptimisticArmed(derivedRequestedArmed);
   }, [derivedRequestedArmed]);
@@ -183,7 +178,7 @@ const styles = StyleSheet.create({
   },
   cardPlaceholderText: { color: colors.accent, fontFamily: "SF-Pro-Text-Semibold" },
   statusPill: {
-    backgroundColor:colors.noMovement,
+    backgroundColor: colors.accent,
     paddingVertical: 10,
     paddingHorizontal: 24,
     borderRadius: 12,

@@ -7,8 +7,7 @@ import type { TimelineDescriptionLine, TimelineEntry } from "@/types/timeline";
 import { type Chunk, type SecuriFiEvent, normaliseEventType } from "@/types/firestore";
 import { useHome } from "@/hooks/useHome";
 import { subscribeToTimeline } from "@/services/events";
-import { subscribeToNodesForHome } from "@/services/nodes";
-import { bold, buildPlayByPlayFromPackages, formatPackageTime, text } from "@/utils/eventDescriptions";
+import { bold, formatPackageTime, text } from "@/utils/eventDescriptions";
 
 function formatTimelineDate(timestamp?: any): string {
   if (!timestamp) return "";
@@ -65,7 +64,8 @@ function formatTimelineTime(timestamp?: any): string {
   if (isNaN(date.getTime())) return "";
   const hh = String(date.getHours()).padStart(2, "0");
   const mm = String(date.getMinutes()).padStart(2, "0");
-  return `${hh}:${mm}`;
+  const ss = String(date.getSeconds()).padStart(2, "0");
+  return `${hh}:${mm}:${ss}`;
 }
 
 function getRelativeDateLabel(timestamp?: any): string {
@@ -108,17 +108,18 @@ function getRelativeDateLabel(timestamp?: any): string {
 
 type TimelineEvent = SecuriFiEvent & { chunks: Chunk[] };
 
-function buildSummaryLines(event: TimelineEvent, nodeNameMap: Record<string, string>): TimelineDescriptionLine[] {
+function buildSummaryLines(event: SecuriFiEvent): TimelineDescriptionLine[] {
   if (event.summary?.length) {
     return event.summary.map((entry) => ({
       parts: [bold(formatPackageTime(entry.timestamp)), text("  "), text(entry.description)],
     }));
   }
 
-  const packages = event.chunks.flatMap((chunk) => chunk.packages ?? []);
-  return packages.length
-    ? buildPlayByPlayFromPackages(packages, nodeNameMap)
-    : [{ parts: [text("No activity was recorded for this event.")] }];
+  if (event.falseAlarm === true || typeof event.falseAlarm === "string") {
+    return [];
+  }
+
+  return [{ parts: [text("No activity was recorded for this event.")] }];
 }
 
 function eventTypeDetails(eventType: SecuriFiEvent["eventType"]): Pick<TimelineEntry, "eventType" | "title"> {
@@ -134,8 +135,7 @@ function eventTypeDetails(eventType: SecuriFiEvent["eventType"]): Pick<TimelineE
 }
 
 function mapEventToTimelineEntry(
-  event: TimelineEvent,
-  nodeNameMap: Record<string, string>
+  event: TimelineEvent
 ): TimelineEntry {
   const date = formatTimelineDate(event.startedAt);
   const startTime = formatTimelineTime(event.startedAt);
@@ -145,12 +145,6 @@ function mapEventToTimelineEntry(
   const isFalseAlarm = event.falseAlarm === true || typeof event.falseAlarm === "string";
   const status = [isFalseAlarm && "False alarm"].filter(Boolean).join(", ");
   const descriptionLines: TimelineDescriptionLine[] = [];
-
-  if (status) {
-    descriptionLines.push({
-      parts: [bold("Status: "), text(status)],
-    });
-  }
 
   const falseAlarmReason = typeof event.falseAlarm === "string"
     ? event.falseAlarm
@@ -166,7 +160,7 @@ function mapEventToTimelineEntry(
   }
 
   //descriptionLines.push({ parts: [bold("Play-by-play")] });
-  descriptionLines.push(...buildSummaryLines(event, nodeNameMap));
+  descriptionLines.push(...buildSummaryLines(event));
 
   return {
     id: event.eid,
@@ -185,18 +179,7 @@ const NO_DATE_LABELS = new Set(["Today", "Yesterday"]);
 export default function TimelineScreen() {
   const { hid, isLoading: isHomeLoading } = useHome();
   const [rawEvents, setRawEvents] = useState<TimelineEvent[]>([]);
-  const [nodes, setNodes] = useState<any[]>([]);
   const [isLoadingEvents, setIsLoadingEvents] = useState(true);
-
-  // Subscribe to home's nodes for real-time nickname resolution
-  useEffect(() => {
-    if (!hid) {
-      setNodes([]);
-      return;
-    }
-    const unsubscribe = subscribeToNodesForHome(hid, setNodes);
-    return unsubscribe;
-  }, [hid]);
 
   // Subscribe to home's timeline events
   useEffect(() => {
@@ -215,23 +198,9 @@ export default function TimelineScreen() {
     return unsubscribe;
   }, [hid]);
 
-  // Build lookup map for nodeId -> nickname
-  const nodeNameMap = useMemo(() => {
-    const map: Record<string, string> = {};
-    for (const node of nodes) {
-      const id = node.nodeId || node.id;
-      const name = node.nickname || node.name;
-      if (id && name) {
-        map[id] = name;
-      }
-    }
-    return map;
-  }, [nodes]);
-
-  // Map events with latest node nicknames
   const entries = useMemo(() => {
-    return rawEvents.map((event) => mapEventToTimelineEntry(event, nodeNameMap));
-  }, [rawEvents, nodeNameMap]);
+    return rawEvents.map((event) => mapEventToTimelineEntry(event));
+  }, [rawEvents]);
 
   // Group entries by relative date.
   const groupedEntries = useMemo(() => {

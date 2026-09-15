@@ -3,7 +3,15 @@ import { useRouter } from "expo-router";
 import { SymbolView } from "expo-symbols";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
-export function ScreenHeader({ title }: { title: string }) {
+export function ScreenHeader({
+  title,
+  titleColor = colors.text,
+  iconColor = colors.accent,
+}: {
+  title: string;
+  titleColor?: string;
+  iconColor?: string;
+}) {
   const router = useRouter();
 
   return (
@@ -12,11 +20,11 @@ export function ScreenHeader({ title }: { title: string }) {
         <SymbolView
           name="chevron.left"
           size={22}
-          tintColor={colors.accent}
+          tintColor={iconColor}
         />
       </TouchableOpacity>
 
-      <Text style={styles.title}>{title}</Text>
+      <Text style={[styles.title, { color: titleColor }]}>{title}</Text>
 
       {/* Invisible spacer equal to left icon width */}
       <View style={styles.iconContainer} />
