@@ -7,6 +7,7 @@ import {
   type FirestoreNode,
 } from "@/services/nodes";
 import { colors } from "@/theme/colors";
+import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -88,7 +89,9 @@ export default function NodesScreen() {
       });
 
       await Promise.all(updatePromises);
-      Alert.alert("Success", "Node configurations updated successfully.");
+      
+      // Navigate back to the previous screen on success
+      router.back();
     } catch (error) {
       console.error("Failed to rename nodes:", error);
       Alert.alert("Error", "Could not save node changes. Please try again.");
