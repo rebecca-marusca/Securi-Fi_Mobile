@@ -46,7 +46,7 @@ This repository contains the **mobile app** (React Native / Expo) and the **REST
 
 ## Built for DPIT
 
-Securi-Fi is a six-person team project built over three months for **DPIT** (Discover Your Passion in IT), a Romanian high school technology competition. The work is split across hardware firmware, an ingestion server, and the mobile app, which is why the system is spread over three repositories that share a single Firebase project.
+Securi-Fi is a six-person team project built over three months for **DPIT**, a Romanian high school technology competition. The work is split across hardware firmware, an ingestion server, and the mobile app, which is why the system is spread over three repositories that share a single Firebase project.
 
 ---
 
