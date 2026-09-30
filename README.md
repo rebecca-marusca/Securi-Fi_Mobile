@@ -5,7 +5,7 @@
 <h1 align="center">Securi-Fi</h1>
 
 <p align="center">
-  <strong>Security that feels invisible.</strong>
+  <strong>Intuitive by design. Private by nature.</strong>
 </p>
 
 
